@@ -18,4 +18,15 @@ app.use(express.urlencoded({ extended: true }));
 
 // Health check endpoint
 app.get('/api/health', (req: Request, res: Response) => {
-  res.json({ 
+  res.json({ status: 'ok' });
+});
+
+// Mount API routers under /api
+app.use('/api', apiRouter);
+
+// Global error handling middleware
+app.use(errorHandler);
+
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on http://localhost:${PORT}`);
+});
