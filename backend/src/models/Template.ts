@@ -93,4 +93,6 @@ const TemplateSchema = new Schema<ITemplate>({
   isActive: { type: Boolean, default: true },
 });
 
-export default mongoose.model<ITemplate>('Template', TemplateSchema);
+export const Template = mongoose.model<ITemplate>('Template', TemplateSchema);
+
+

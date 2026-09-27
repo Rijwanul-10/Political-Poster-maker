@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import { config } from './config';
-import Template from './models/Template';
+import { Template } from './models/Template';
 
 async function seed() {
   try {

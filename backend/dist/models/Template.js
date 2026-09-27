@@ -33,6 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.Template = void 0;
 // src/models/Template.ts
 const mongoose_1 = __importStar(require("mongoose"));
 const LayoutConfigSchema = new mongoose_1.Schema({
@@ -75,4 +76,4 @@ const TemplateSchema = new mongoose_1.Schema({
     layoutConfig: { type: LayoutConfigSchema, required: true },
     isActive: { type: Boolean, default: true },
 });
-exports.default = mongoose_1.default.model('Template', TemplateSchema);
+exports.Template = mongoose_1.default.model('Template', TemplateSchema);

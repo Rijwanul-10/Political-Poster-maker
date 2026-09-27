@@ -2,7 +2,7 @@ import mongoose, { Document, Schema, Types } from 'mongoose';
 
 export interface IPoster extends Document {
   userId: Types.ObjectId;
-  templateId: Types.ObjectId;
+  templateId: Types.ObjectId | string;
   formData: {
     name: string;
     designation?: string;

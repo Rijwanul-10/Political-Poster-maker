@@ -5,7 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importDefault(require("mongoose"));
 const config_1 = require("./config");
-const Template_1 = __importDefault(require("./models/Template"));
+const Template_1 = require("./models/Template");
 async function seed() {
     try {
         await mongoose_1.default.connect(config_1.config.mongoUri);
@@ -55,8 +55,8 @@ async function seed() {
                 isActive: true
             }
         ];
-        await Template_1.default.deleteMany({}); // clear old seeds
-        const created = await Template_1.default.insertMany(templates);
+        await Template_1.Template.deleteMany({}); // clear old seeds
+        const created = await Template_1.Template.insertMany(templates);
         console.log(`✅ Seeded ${created.length} templates`);
     }
     catch (err) {
