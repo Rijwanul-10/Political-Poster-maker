@@ -51,6 +51,7 @@ router.post('/', async (req: AuthenticatedRequest, res: Response, next: NextFunc
       // Call Gemini for layout suggestions (crops, colors)
       const geminiSuggestion = await generateLayoutSuggestion(template, photoUrls, normalizedFormData);
       poster.geminiSuggestion = geminiSuggestion;
+      poster.markModified('geminiSuggestion');
 
       // Render poster image via Puppeteer
       const imageBuffer = await renderPosterToBuffer(template, geminiSuggestion, normalizedFormData, photoUrls);
@@ -99,6 +100,7 @@ router.post('/:id/regenerate', async (req: AuthenticatedRequest, res: Response, 
 
     const geminiSuggestion = await generateLayoutSuggestion(template, poster.uploadedPhotoUrls, poster.formData);
     poster.geminiSuggestion = geminiSuggestion;
+    poster.markModified('geminiSuggestion');
     poster.regenerateCount += 1;
 
     const imageBuffer = await renderPosterToBuffer(template, geminiSuggestion, poster.formData, poster.uploadedPhotoUrls);

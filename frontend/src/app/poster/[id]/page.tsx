@@ -117,6 +117,29 @@ export default function PosterStatusPage({
     }
   };
 
+  const handleDownloadPdf = () => {
+    if (!poster?.generatedImageUrl) return;
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>${poster.formData?.headline || "পোস্টার"}</title>
+          <style>
+            @page { size: A3 portrait; margin: 0; }
+            body { margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; background: #000; }
+            img { width: 100vw; height: 100vh; object-fit: contain; }
+          </style>
+        </head>
+        <body>
+          <img src="${poster.generatedImageUrl}" onload="window.print();window.close();" />
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
   if (loading) {
     return (
       <div className="min-h-[70vh] flex flex-col items-center justify-center p-4">
@@ -228,6 +251,15 @@ export default function PosterStatusPage({
               >
                 <span>📥</span>
                 <span>হাই-রেজ্যুলেশন PNG ডাউনলোড</span>
+              </button>
+
+              <button
+                onClick={handleDownloadPdf}
+                disabled={!poster?.generatedImageUrl || isGenerating}
+                className="w-full py-3 px-4 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-sm border border-rose-200 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                <span>📄</span>
+                <span>প্রিন্ট-রেডি PDF এক্সপোর্ট (A3/Banner)</span>
               </button>
 
               <button

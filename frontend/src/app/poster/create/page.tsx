@@ -29,12 +29,21 @@ function PosterForm() {
     party: "",
     district: "",
     headline: "",
+    headlineFont: "Tiro Bangla",
+    photoLayout: "cutout",
+    removeWatermark: false,
   });
+
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
+
+  // Stretch Feature: Bulk CSV state
+  const [showBulkUpload, setShowBulkUpload] = useState(false);
+  const [bulkCsvFile, setBulkCsvFile] = useState<File | null>(null);
+  const [bulkResults, setBulkResults] = useState<any[] | null>(null);
 
   useEffect(() => {
     if (!authLoading && !token) {
@@ -55,29 +64,41 @@ function PosterForm() {
     return () => urls.forEach((u) => URL.revokeObjectURL(u));
   }, [photoFiles]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const target = e.target;
+    const value = target.type === "checkbox" ? (target as HTMLInputElement).checked : target.value;
+    setFormData({ ...formData, [target.name]: value });
   };
 
   const handleFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (!files) return;
+    if (!files || files.length === 0) return;
     const selected = Array.from(files);
 
-    if (selected.length > MAX_PHOTOS) {
-      setError(`সর্বোচ্চ ${MAX_PHOTOS} টি ছবি আপলোড করতে পারবেন।`);
-      return;
-    }
-
+    // Check size limit on newly selected files
     for (const f of selected) {
       if (f.size > MAX_FILE_SIZE) {
         setError(`"${f.name}" ফাইলটির সাইজ ৮ মেগাবাইটের বেশি। অনুগ্রহ করে ছোট ছবি দিন।`);
+        e.target.value = "";
         return;
       }
     }
 
-    setError(null);
-    setPhotoFiles(selected);
+    // Use functional state updater to avoid stale closure –
+    // this ensures we always merge with the LATEST photoFiles,
+    // even when adding photos one after another quickly.
+    setPhotoFiles((prev) => {
+      const combined = [...prev, ...selected];
+      if (combined.length > MAX_PHOTOS) {
+        setError(`সর্বোচ্চ ${MAX_PHOTOS} টি ছবি আপলোড করতে পারবেন। (ইতিমধ্যে ${prev.length}টি আছে)`);
+        return prev; // don't change state
+      }
+      setError(null);
+      return combined;
+    });
+
+    // Reset file input so user can click and select more files one by one
+    e.target.value = "";
   };
 
   const removePhoto = (index: number) => {
@@ -130,7 +151,10 @@ function PosterForm() {
         token,
         body: {
           templateId,
-          formData,
+          formData: {
+            ...formData,
+            watermark: !formData.removeWatermark,
+          },
           photoUrls,
         },
       });
@@ -138,6 +162,56 @@ function PosterForm() {
       router.push(`/poster/${posterRes.posterId}`);
     } catch (err: any) {
       setError(err.message || "পোস্টার জেনারেশনে সমস্যা দেখা দিয়েছে");
+      setLoading(false);
+    }
+  };
+
+  // Stretch Feature: Bulk CSV generation handler
+  const handleBulkCsv = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!bulkCsvFile) {
+      alert("অনুগ্রহ করে একটি CSV ফাইল আপলোড করুন");
+      return;
+    }
+    setLoading(true);
+    setStatusMessage("CSV ফাইল প্রসেস করা হচ্ছে...");
+    try {
+      const text = await bulkCsvFile.text();
+      const lines = text.split("\n").filter((l) => l.trim().length > 0);
+      const headers = lines[0].split(",").map((h) => h.trim().toLowerCase());
+
+      const results = [];
+      for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].split(",").map((v) => v.trim());
+        const rowData: any = {};
+        headers.forEach((h, idx) => {
+          rowData[h] = values[idx] || "";
+        });
+
+        setStatusMessage(`ব্যাচ পোস্টার তৈরি হচ্ছে (${i}/${lines.length - 1}): ${rowData.name || "সদস্য"}...`);
+
+        const res = await apiFetch<{ posterId: string; imageUrl?: string }>("/posters", {
+          method: "POST",
+          token,
+          body: {
+            templateId,
+            formData: {
+              name: rowData.name || "সম্মানিত নেতা",
+              designation: rowData.designation || "সদস্য",
+              party: rowData.party || formData.party || "বাংলাদেশ আওয়ামী লীগ",
+              district: rowData.district || formData.district,
+              headline: rowData.headline || formData.headline || "শুভেচ্ছা ও অভিনন্দন",
+            },
+            photoUrls: previewUrls.length > 0 ? previewUrls : [],
+          },
+        });
+        results.push({ name: rowData.name, posterId: res.posterId, imageUrl: res.imageUrl });
+      }
+
+      setBulkResults(results);
+    } catch (err: any) {
+      setError("বাল্ক জেনারেশন ব্যর্থ হয়েছে: " + err.message);
+    } finally {
       setLoading(false);
     }
   };
@@ -169,12 +243,21 @@ function PosterForm() {
               {template?.title || "পোস্টার তথ্য ফর্ম"}
             </h1>
           </div>
-          <Link
-            href="/templates"
-            className="text-xs text-slate-500 hover:text-slate-800 underline"
-          >
-            অন্য টেমপ্লেট বেছে নিন
-          </Link>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setShowBulkUpload(!showBulkUpload)}
+              className="text-xs px-3 py-1.5 rounded-lg border border-purple-200 bg-purple-50 text-purple-700 font-bold hover:bg-purple-100 transition"
+            >
+              {showBulkUpload ? "সাধারণ ফর্ম" : "⚡ বাল্ক / CSV মোড"}
+            </button>
+            <Link
+              href="/templates"
+              className="text-xs text-slate-500 hover:text-slate-800 underline"
+            >
+              অন্য টেমপ্লেট
+            </Link>
+          </div>
         </div>
 
         {error && (
@@ -184,158 +267,262 @@ function PosterForm() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        {/* BULK CSV GENERATION MODE */}
+        {showBulkUpload ? (
+          <form onSubmit={handleBulkCsv} className="space-y-6">
+            <div className="p-4 bg-purple-50 rounded-2xl border border-purple-200 text-purple-900 text-xs leading-relaxed">
+              <span className="font-bold block text-sm mb-1">বাল্ক পোস্টার জেনারেটর (CSV Batch)</span>
+              একসাথে স্থানীয় কমিটির ১০০+ সদস্যের জন্য আলাদা পোস্টার তৈরি করুন। CSV ফাইলে হেডার হিসেবে{" "}
+              <code className="bg-white px-1.5 py-0.5 rounded font-mono font-bold">name, designation, party, district, headline</code> রাখুন।
+            </div>
+
             <div>
               <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
-                নেতা / প্রার্থীর নাম *
+                কমিটির CSV ফাইল আপলোড করুন
               </label>
               <input
-                type="text"
-                name="name"
+                type="file"
+                accept=".csv"
                 required
-                placeholder="যেমন: ইঞ্জিনিয়ার মো: রফিকুল ইসলাম"
-                value={formData.name}
-                onChange={handleChange}
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition-all text-sm"
+                onChange={(e) => setBulkCsvFile(e.target.files?.[0] || null)}
+                className="w-full text-xs text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-purple-100 file:text-purple-700 hover:file:bg-purple-200"
               />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-4 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-extrabold text-sm shadow hover:shadow-lg transition disabled:opacity-50"
+            >
+              {loading ? statusMessage : "বাল্ক পোস্টার জেনারেট শুরু করুন ⚡"}
+            </button>
+
+            {bulkResults && (
+              <div className="mt-6 p-4 bg-emerald-50 rounded-2xl border border-emerald-200 space-y-2">
+                <span className="font-bold text-xs text-emerald-800">✅ তৈরি হওয়া পোস্টারসমূহ:</span>
+                <div className="max-h-48 overflow-y-auto space-y-1">
+                  {bulkResults.map((r, i) => (
+                    <div key={i} className="flex justify-between items-center text-xs bg-white p-2 rounded-lg border">
+                      <span>{r.name}</span>
+                      <Link href={`/poster/${r.posterId}`} target="_blank" className="text-emerald-600 font-bold underline">
+                        দেখুন ↗
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </form>
+        ) : (
+          /* STANDARD FORM */
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+                  নেতা / প্রার্থীর নাম *
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  required
+                  placeholder="যেমন: ইঞ্জিনিয়ার মো: রফিকুল ইসলাম"
+                  value={formData.name}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition-all text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+                  পদবী / পরিচয় *
+                </label>
+                <input
+                  type="text"
+                  name="designation"
+                  required
+                  placeholder="যেমন: সভাপতি, সাধারণ সম্পাদক"
+                  value={formData.designation}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition-all text-sm"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+                  সংগঠন / দল *
+                </label>
+                <input
+                  type="text"
+                  name="party"
+                  required
+                  placeholder="যেমন: বাংলাদেশ আওয়ামী লীগ / বিএনপি / অন্যান্য"
+                  value={formData.party}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition-all text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+                  এলাকা / জেলা / থানা
+                </label>
+                <input
+                  type="text"
+                  name="district"
+                  placeholder="যেমন: ধানমন্ডি, ঢাকা"
+                  value={formData.district}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition-all text-sm"
+                />
+              </div>
+            </div>
+
+            {/* STRETCH FEATURES: FONT SELECTION & PHOTO LAYOUT */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 p-4 bg-slate-50/80 rounded-2xl border border-slate-200/80">
+              <div>
+                <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">
+                  🎨 বাংলা টাইপোগ্রাফি ফন্ট (Stretch Feature)
+                </label>
+                <select
+                  name="headlineFont"
+                  value={formData.headlineFont}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-emerald-500/20"
+                >
+                  <option value="Tiro Bangla">তিরো বাংলা (ঐতিহ্যবাহী সেরिफ / Tiro Bangla)</option>
+                  <option value="Hind Siliguri">হিন্দ শিলিগুড়ি (আধুনিক বোল্ড / Hind Siliguri)</option>
+                  <option value="Anek Bangla">অনেক বাংলা (পলিটিক্যাল স্লোগান / Anek Bangla)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">
+                  🖼️ ছবির লেআউট অপশন (Stretch Feature)
+                </label>
+                <select
+                  name="photoLayout"
+                  value={formData.photoLayout}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-emerald-500/20"
+                >
+                  <option value="cutout">কাটআউট ফ্রেম (ঐতিহ্যবাহী গোল্ডেন ফ্রেম)</option>
+                  <option value="circle">সার্কেল পোরট্রেট (বৃত্তাকার ফ্রেম)</option>
+                  <option value="grid">২-আপ / ৩-আপ মডার্ন গ্রিড (সমান্তরাল)</option>
+                </select>
+              </div>
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
-                পদবী / পরিচয় *
+                মূল স্লোগান / হেডলাইন বার্তা *
               </label>
-              <input
-                type="text"
-                name="designation"
+              <textarea
+                name="headline"
                 required
-                placeholder="যেমন: সভাপতি, সাধারণ সম্পাদক"
-                value={formData.designation}
+                rows={3}
+                placeholder="যেমন: মহান বিজয় দিবসে সকল শহীদদের প্রতি বিনম্র শ্রদ্ধাঞ্জলি"
+                value={formData.headline}
                 onChange={handleChange}
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition-all text-sm"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
-                সংগঠন / দল *
-              </label>
-              <input
-                type="text"
-                name="party"
-                required
-                placeholder="যেমন: বাংলাদেশ আওয়ামী লীগ / বিএনপি / অন্যান্য"
-                value={formData.party}
-                onChange={handleChange}
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition-all text-sm"
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition-all text-sm resize-none"
               />
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
-                এলাকা / জেলা / থানা
-              </label>
-              <input
-                type="text"
-                name="district"
-                placeholder="যেমন: ধানমন্ডি, ঢাকা"
-                value={formData.district}
-                onChange={handleChange}
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition-all text-sm"
-              />
+            {/* Photo Upload Zone */}
+            <div className="pt-2">
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                  ছবি আপলোড (সর্বোচ্চ {MAX_PHOTOS} টি, প্রতিটি সর্বোচ্চ ৮ MB) *
+                </label>
+                <span className="text-xs text-slate-400">
+                  {photoFiles.length}/{MAX_PHOTOS} নির্বাচিত
+                </span>
+              </div>
+
+              <div className="border-2 border-dashed border-slate-300 hover:border-emerald-500 rounded-2xl p-6 text-center transition-colors bg-slate-50/50">
+                <input
+                  type="file"
+                  id="photo-upload"
+                  accept="image/*"
+                  multiple
+                  onChange={handleFiles}
+                  className="hidden"
+                  disabled={photoFiles.length >= MAX_PHOTOS}
+                />
+                <label
+                  htmlFor="photo-upload"
+                  className="cursor-pointer inline-flex flex-col items-center justify-center"
+                >
+                  <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-2xl mb-2">
+                    📷
+                  </div>
+                  <span className="text-sm font-bold text-slate-700">
+                    {photoFiles.length >= MAX_PHOTOS
+                      ? "সর্বোচ্চ সংখ্যক ছবি সিলেক্ট করা হয়েছে"
+                      : "ছবি নির্বাচন করতে ক্লিক করুন"}
+                  </span>
+                  <span className="text-xs text-slate-400 mt-1">
+                    JPG, PNG অথবা WebP ফরম্যাট সাপোর্টেড
+                  </span>
+                </label>
+              </div>
+
+              {/* Photo Previews */}
+              {previewUrls.length > 0 && (
+                <div className="mt-4 grid grid-cols-3 gap-3">
+                  {previewUrls.map((url, i) => (
+                    <div key={i} className="relative aspect-square rounded-xl overflow-hidden border border-slate-200 group">
+                      <img
+                        src={url}
+                        alt={`Preview ${i + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removePhoto(i)}
+                        className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-red-600 text-white flex items-center justify-center text-xs font-bold shadow hover:bg-red-700 transition"
+                      >
+                        ✕
+                      </button>
+                      <div className="absolute bottom-1 left-1 bg-black/60 text-[10px] text-white px-1.5 py-0.5 rounded">
+                        ছবি #{i + 1}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-          </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
-              মূল স্লোগান / হেডলাইন বার্তা *
-            </label>
-            <textarea
-              name="headline"
-              required
-              rows={3}
-              placeholder="যেমন: মহান বিজয় দিবসে সকল শহীদদের প্রতি বিনম্র শ্রদ্ধাঞ্জলি"
-              value={formData.headline}
-              onChange={handleChange}
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition-all text-sm resize-none"
-            />
-          </div>
-
-          {/* Photo Upload Zone */}
-          <div className="pt-2">
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                ছবি আপলোড (সর্বোচ্চ {MAX_PHOTOS} টি, প্রতিটি সর্বোচ্চ ৮ MB) *
-              </label>
-              <span className="text-xs text-slate-400">
-                {photoFiles.length}/{MAX_PHOTOS} নির্বাচিত
+            {/* STRETCH FEATURE: WATERMARK TOGGLE / PAID UPGRADE */}
+            <div className="flex items-center justify-between p-3.5 bg-amber-50/60 rounded-xl border border-amber-200/80">
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="removeWatermark"
+                  name="removeWatermark"
+                  checked={formData.removeWatermark}
+                  onChange={handleChange}
+                  className="w-4 h-4 rounded text-emerald-600 border-slate-300 focus:ring-emerald-500"
+                />
+                <label htmlFor="removeWatermark" className="text-xs font-semibold text-slate-800 cursor-pointer">
+                  ✨ ওয়াটারমার্ক ছাড়া ডাউনলোড করুন (Watermark Removal Tier)
+                </label>
+              </div>
+              <span className="text-[10px] bg-amber-200/70 text-amber-900 font-bold px-2 py-0.5 rounded-full">
+                bKash / Nagad প্রিমিয়াম
               </span>
             </div>
 
-            <div className="border-2 border-dashed border-slate-300 hover:border-emerald-500 rounded-2xl p-6 text-center transition-colors bg-slate-50/50">
-              <input
-                type="file"
-                id="photo-upload"
-                accept="image/*"
-                multiple
-                onChange={handleFiles}
-                className="hidden"
-                disabled={photoFiles.length >= MAX_PHOTOS}
-              />
-              <label
-                htmlFor="photo-upload"
-                className="cursor-pointer inline-flex flex-col items-center justify-center"
-              >
-                <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-2xl mb-2">
-                  📷
-                </div>
-                <span className="text-sm font-bold text-slate-700">
-                  {photoFiles.length >= MAX_PHOTOS
-                    ? "সর্বোচ্চ সংখ্যক ছবি সিলেক্ট করা হয়েছে"
-                    : "ছবি নির্বাচন করতে ক্লিক করুন"}
-                </span>
-                <span className="text-xs text-slate-400 mt-1">
-                  JPG, PNG অথবা WebP ফরম্যাট সাপোর্টেড
-                </span>
-              </label>
-            </div>
-
-            {/* Photo Previews */}
-            {previewUrls.length > 0 && (
-              <div className="mt-4 grid grid-cols-3 gap-3">
-                {previewUrls.map((url, i) => (
-                  <div key={i} className="relative aspect-square rounded-xl overflow-hidden border border-slate-200 group">
-                    <img
-                      src={url}
-                      alt={`Preview ${i + 1}`}
-                      className="w-full h-full object-cover"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removePhoto(i)}
-                      className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-red-600 text-white flex items-center justify-center text-xs font-bold shadow hover:bg-red-700 transition"
-                    >
-                      ✕
-                    </button>
-                    <div className="absolute bottom-1 left-1 bg-black/60 text-[10px] text-white px-1.5 py-0.5 rounded">
-                      ছবি #{i + 1}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full mt-6 py-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-base shadow-lg shadow-emerald-600/20 hover:shadow-xl transition-all disabled:opacity-50"
-          >
-            {loading ? statusMessage || "পোস্টার জেনারেট হচ্ছে..." : "পোস্টার তৈরি করুন 🚀"}
-          </button>
-        </form>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full mt-6 py-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-base shadow-lg shadow-emerald-600/20 hover:shadow-xl transition-all disabled:opacity-50"
+            >
+              {loading ? statusMessage || "পোস্টার জেনারেট হচ্ছে..." : "পোস্টার তৈরি করুন 🚀"}
+            </button>
+          </form>
+        )}
       </div>
     </div>
   );

@@ -11,12 +11,12 @@ export interface IPoster extends Document {
     union?: string;
     occasionType: string;
     headlineText?: string;
+    headlineFont?: string;
+    photoLayout?: string;
+    watermark?: boolean;
   };
   uploadedPhotoUrls: string[];
-  geminiSuggestion?: {
-    crops: any[]; // shape of Gemini response – keep flexible
-    colorScheme?: string;
-  };
+  geminiSuggestion?: any;
   generatedImageUrl?: string;
   status: 'draft' | 'generating' | 'completed' | 'failed';
   regenerateCount: number;
@@ -36,12 +36,12 @@ const PosterSchema = new Schema<IPoster>(
       union: String,
       occasionType: { type: String, required: true },
       headlineText: String,
+      headlineFont: String,
+      photoLayout: String,
+      watermark: Boolean,
     },
     uploadedPhotoUrls: [{ type: String }],
-    geminiSuggestion: {
-      crops: [{ type: Schema.Types.Mixed }],
-      colorScheme: String,
-    },
+    geminiSuggestion: { type: Schema.Types.Mixed, default: null },
     generatedImageUrl: String,
     status: { type: String, enum: ['draft', 'generating', 'completed', 'failed'], default: 'draft' },
     regenerateCount: { type: Number, default: 0 },

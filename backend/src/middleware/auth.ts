@@ -16,7 +16,16 @@ export function authMiddleware(req: AuthenticatedRequest, res: Response, next: N
   if (!payload) {
     return res.status(401).json({ error: 'Invalid or expired token' });
   }
-  // Attach minimal user info to request (id & role). Full user can be fetched later if needed.
+  // Attach minimal user info to request (id & role).
   req.user = { _id: payload.sub, role: payload.role } as any;
   next();
+}
+
+export function adminMiddleware(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  authMiddleware(req, res, () => {
+    if (req.user?.role !== 'admin') {
+      return res.status(403).json({ error: 'Access denied: Admin privilege required' });
+    }
+    next();
+  });
 }

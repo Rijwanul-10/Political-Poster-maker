@@ -4,6 +4,10 @@ import { ITemplate } from '../models/Template';
 /**
  * Renders a high-resolution, print-ready Bengali political or festival poster
  * using Puppeteer and CSS styling matching authentic Bangladeshi poster design grammar.
+ * Supports stretch features:
+ * - Custom Bangla headline font selection ('Tiro Bangla' | 'Hind Siliguri' | 'Anek Bangla')
+ * - Flexible photo grid layouts (1-up, 2-up, 3-up grid or circle cutout)
+ * - Optional watermark removal
  */
 export async function renderPosterToBuffer(
   template: ITemplate,
@@ -19,8 +23,19 @@ export async function renderPosterToBuffer(
   const accentColor = suggestion?.colorScheme?.accentColor || (isEid ? '#d97706' : '#dc2626');
   const goldColor = suggestion?.colorScheme?.goldColor || '#f59e0b';
 
+  // Stretch Feature: Bangla font selection
+  const chosenFont = formData.headlineFont || 'Tiro Bangla';
+  const headlineFontFamily = chosenFont === 'Hind Siliguri' 
+    ? "'Hind Siliguri', sans-serif" 
+    : chosenFont === 'Anek Bangla' 
+    ? "'Anek Bangla', sans-serif" 
+    : "'Tiro Bangla', serif";
+
+  // Stretch Feature: Multiple photo layout styles ('grid', 'cutout', 'circle')
+  const photoLayout = formData.photoLayout || 'cutout';
+
   const photosHtml = photoUrls.map((url, idx) => `
-    <div class="photo-card photo-${idx + 1}">
+    <div class="photo-card photo-card-${photoLayout} photo-${idx + 1}">
       <div class="photo-inner">
         <img src="${url}" alt="Leader ${idx + 1}" />
       </div>
@@ -28,12 +43,15 @@ export async function renderPosterToBuffer(
     </div>
   `).join('');
 
+  // Stretch Feature: Watermark toggle
+  const showWatermark = formData.watermark !== false;
+
   const html = `
     <!DOCTYPE html>
     <html lang="bn">
       <head>
         <meta charset="UTF-8" />
-        <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600;700;800&family=Tiro+Bangla:ital@0;1&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600;700;800&family=Tiro+Bangla:ital@0;1&family=Anek+Bangla:wght@600;700;800&display=swap" rel="stylesheet" />
         <style>
           * { box-sizing: border-box; margin: 0; padding: 0; }
           body {
@@ -47,7 +65,7 @@ export async function renderPosterToBuffer(
             width: ${width}px;
             height: ${height}px;
             position: relative;
-            background: linear-gradient(180deg, #064e3b 0%, #022c22 45%, #0f172a 100%);
+            background: linear-gradient(180deg, ${primaryColor} 0%, #022c22 45%, #0f172a 100%);
             display: flex;
             flex-direction: column;
             justify-content: space-between;
@@ -113,7 +131,7 @@ export async function renderPosterToBuffer(
             margin-bottom: 20px;
           }
           .headline-text {
-            font-family: 'Tiro Bangla', serif;
+            font-family: ${headlineFontFamily};
             font-size: 56px;
             font-weight: 800;
             line-height: 1.25;
@@ -148,6 +166,14 @@ export async function renderPosterToBuffer(
             box-shadow: 0 20px 40px rgba(0,0,0,0.6);
             border: 5px solid #fcd34d;
             background: #000;
+          }
+          .photo-card-circle {
+            border-radius: 50% !important;
+            border: 6px solid #fcd34d !important;
+          }
+          .photo-card-grid {
+            border-radius: 16px !important;
+            border: 4px solid #f59e0b !important;
           }
           .photo-1 { width: 340px; height: 420px; }
           .photo-2 { width: 340px; height: 420px; }
@@ -196,6 +222,17 @@ export async function renderPosterToBuffer(
             color: #cbd5e1;
             font-weight: 500;
           }
+
+          /* Watermark */
+          .watermark-tag {
+            position: absolute;
+            bottom: 35px;
+            right: 45px;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.4);
+            letter-spacing: 1px;
+            z-index: 52;
+          }
         </style>
       </head>
       <body>
@@ -210,7 +247,7 @@ export async function renderPosterToBuffer(
           <!-- Header -->
           <div class="header-box">
             <div class="party-pill">${formData.party || 'বাংলাদেশ'}</div>
-            <h1 class="headline-text">${formData.headline || template.title}</h1>
+            <h1 class="headline-text">${formData.headlineText || formData.headline || template.title}</h1>
             <div class="sub-occasion">${formData.district ? formData.district + ' • ' : ''}${template.title}</div>
           </div>
 
@@ -221,11 +258,13 @@ export async function renderPosterToBuffer(
 
           <!-- Footer Leader Details -->
           <div class="footer-box">
-            <div class="candidate-label">শুভেচ্ছান্তে</div>
+            <div class="candidate-label">প্রচারে / শুভেচ্ছান্তে</div>
             <div class="candidate-name">${formData.name || 'নেতার নাম'}</div>
             <div class="candidate-designation">${formData.designation || 'পদবী'}</div>
             <div class="candidate-meta">${formData.party || ''} ${formData.district ? '• ' + formData.district : ''}</div>
           </div>
+
+          ${showWatermark ? '<div class="watermark-tag">পোস্টার কারিগর • AI Studio</div>' : ''}
         </div>
       </body>
     </html>

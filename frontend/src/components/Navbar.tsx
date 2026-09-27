@@ -30,7 +30,7 @@ export default function Navbar() {
           </div>
         </Link>
 
-        <nav className="flex items-center gap-5 sm:gap-6">
+        <nav className="flex items-center gap-4 sm:gap-6">
           <Link
             href="/templates"
             className="text-sm font-semibold text-gray-600 hover:text-emerald-700 transition-colors"
@@ -44,6 +44,15 @@ export default function Navbar() {
               className="text-sm font-semibold text-gray-600 hover:text-emerald-700 transition-colors"
             >
               আমার পোস্টার
+            </Link>
+          )}
+
+          {user?.role === "admin" && (
+            <Link
+              href="/admin"
+              className="text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 px-3 py-1.5 rounded-lg shadow-sm transition"
+            >
+              🛡️ অ্যাডমিন প্যানেল
             </Link>
           )}
 

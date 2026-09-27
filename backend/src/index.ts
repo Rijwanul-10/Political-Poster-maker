@@ -6,6 +6,7 @@ import mongoose from 'mongoose';
 import { config } from './config';
 import apiRouter from './routes';
 import { errorHandler } from './middleware/errorHandler';
+import { ensureAdminUser } from './services/seedAdmin';
 
 const app = express();
 const PORT = config.port || 5000;
@@ -42,6 +43,7 @@ async function startServer() {
     if (config.mongoUri) {
       await mongoose.connect(config.mongoUri);
       console.log('✅ Connected to MongoDB Atlas');
+      await ensureAdminUser();
     } else {
       console.warn('⚠️ Warning: MONGODB_URI is not set');
     }
