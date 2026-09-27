@@ -138,8 +138,8 @@ function makeSvgThumbnail(
 
 async function seed() {
   try {
-    await mongoose.connect(config.mongoUri);
-    console.log('✅ Connected to MongoDB Atlas');
+    await mongoose.connect(config.mongoUri, { dbName: 'political_poster' });
+    console.log('✅ Connected to MongoDB Atlas (database: political_poster)');
 
     const templates = [
       // 1. মহান বিজয় দিবস (Victory Day) Classic

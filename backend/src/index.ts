@@ -25,10 +25,21 @@ const uploadsPath = path.resolve(__dirname, '..', 'uploads');
 app.use('/uploads', express.static(uploadsPath));
 
 // Health check endpoint
-app.get('/api/health', (req: Request, res: Response) => {
+app.get('/api/health', async (req: Request, res: Response) => {
+  const isConnected = mongoose.connection.readyState === 1;
+  let templateCount = 0;
+  if (isConnected) {
+    try {
+      templateCount = await mongoose.connection.db.collection('templates').countDocuments();
+    } catch (e) {
+      // ignore
+    }
+  }
   res.json({ 
     status: 'ok', 
-    db: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected' 
+    db: isConnected ? 'connected' : 'disconnected',
+    dbName: mongoose.connection.name,
+    templatesCount: templateCount
   });
 });
 
@@ -41,8 +52,10 @@ app.use(errorHandler);
 async function startServer() {
   try {
     if (config.mongoUri) {
-      await mongoose.connect(config.mongoUri);
-      console.log('✅ Connected to MongoDB Atlas');
+      await mongoose.connect(config.mongoUri, {
+        dbName: 'political_poster',
+      });
+      console.log('✅ Connected to MongoDB Atlas (database: political_poster)');
       await ensureAdminUser();
     } else {
       console.warn('⚠️ Warning: MONGODB_URI is not set');

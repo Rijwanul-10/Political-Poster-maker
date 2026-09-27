@@ -4,7 +4,7 @@ import { User, IUser } from '../models/User';
 import { Otp } from '../models/Otp';
 import { hashPassword, comparePassword } from '../services/authService';
 import { signToken } from '../services/jwtService';
-import { sendOtpEmail } from '../services/emailService';
+import { sendOtpEmail, testSmtpConnection } from '../services/emailService';
 import { config } from '../config';
 
 const router = express.Router();
@@ -44,10 +44,14 @@ router.post('/send-registration-otp', async (req: Request, res: Response, next: 
 
     // Send email
     const emailResult = await sendOtpEmail(normalizedEmail, otpCode, 'registration');
+    if (!emailResult.success) {
+      return res.status(500).json({
+        error: `ইমেইল পাঠানো যায়নি (${emailResult.error || 'SMTP Error'})। সঠিক ইমেইল দিন অথবা অ্যাডমিনের সাথে যোগাযোগ করুন।`,
+      });
+    }
 
     res.json({
       message: 'ভেরিফিকেশন কোড (OTP) আপনার ইমেইলে পাঠানো হয়েছে',
-      previewUrl: emailResult.previewUrl,
     });
   } catch (err) {
     next(err);
@@ -232,10 +236,14 @@ router.post('/forgot-password', async (req: Request, res: Response, next: NextFu
     });
 
     const emailResult = await sendOtpEmail(normalizedEmail, otpCode, 'password_reset');
+    if (!emailResult.success) {
+      return res.status(500).json({
+        error: `ইমেইল পাঠানো যায়নি (${emailResult.error || 'SMTP Error'})। পরে চেষ্টা করুন।`,
+      });
+    }
 
     res.json({
       message: 'পাসওয়ার্ড রিসেট ভেরিফিকেশন কোড আপনার ইমেইলে পাঠানো হয়েছে',
-      previewUrl: emailResult.previewUrl,
     });
   } catch (err) {
     next(err);
@@ -355,6 +363,12 @@ router.post('/google', async (req: Request, res: Response, next: NextFunction) =
     console.error('❌ Google auth error:', err);
     res.status(401).json({ error: 'Google লগইন যাচাইকরণ ব্যর্থ হয়েছে: ' + (err.message || '') });
   }
+});
+
+// Diagnostic endpoint to verify SMTP credentials
+router.get('/test-smtp', async (req: Request, res: Response) => {
+  const result = await testSmtpConnection();
+  res.status(result.success ? 200 : 500).json(result);
 });
 
 export default router;

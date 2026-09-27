@@ -6,26 +6,56 @@ let transporter: any = null;
 async function getTransporter(): Promise<any> {
   if (transporter) return transporter;
 
-  if (config.smtpHost && config.smtpUser && config.smtpPass) {
-    transporter = nodemailer.createTransport({
-      host: config.smtpHost,
-      port: config.smtpPort,
-      secure: config.smtpPort === 465,
-      auth: {
-        user: config.smtpUser,
-        pass: config.smtpPass,
-      },
-    });
-    return transporter;
+  if (config.smtpUser && config.smtpPass) {
+    const isGmail = (config.smtpHost && config.smtpHost.includes('gmail')) || config.smtpUser.includes('@gmail.com');
+    const cleanPass = config.smtpPass.replace(/\s+/g, '');
+
+    if (isGmail) {
+      transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: config.smtpUser,
+          pass: cleanPass,
+        },
+        connectionTimeout: 10000, // 10s timeout prevents hanging 2 minutes
+        greetingTimeout: 10000,
+        socketTimeout: 15000,
+      });
+      return transporter;
+    }
+
+    if (config.smtpHost) {
+      transporter = nodemailer.createTransport({
+        host: config.smtpHost,
+        port: config.smtpPort || 587,
+        secure: config.smtpPort === 465,
+        auth: {
+          user: config.smtpUser,
+          pass: cleanPass,
+        },
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+        socketTimeout: 15000,
+      });
+      return transporter;
+    }
   }
 
   // If SMTP not configured, throw error to enforce real SMTP setup
-  throw new Error('🚨 SMTP configuration missing. Please set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, and SMTP_FROM environment variables.');
+  throw new Error('🚨 SMTP configuration missing. Please set SMTP_USER, SMTP_PASS, SMTP_HOST, and SMTP_FROM environment variables.');
+}
+
+export async function testSmtpConnection(): Promise<{ success: boolean; message: string }> {
+  try {
+    const t = await getTransporter();
+    await t.verify();
+    return { success: true, message: 'SMTP connection verified successfully!' };
+  } catch (err: any) {
+    return { success: false, message: err.message || 'SMTP verification failed' };
+  }
 }
 
 export async function sendOtpEmail(to: string, otp: string, purpose: 'registration' | 'password_reset') {
-  const mailTransporter = await getTransporter();
-
   const isReset = purpose === 'password_reset';
   const subject = isReset 
     ? 'পাসওয়ার্ড রিসেট ভেরিফিকেশন কোড - পোস্টার কারিগর' 
@@ -78,6 +108,7 @@ export async function sendOtpEmail(to: string, otp: string, purpose: 'registrati
   `;
 
   try {
+    const mailTransporter = await getTransporter();
     const info = await mailTransporter.sendMail({
       from: config.smtpFrom,
       to,
@@ -86,13 +117,9 @@ export async function sendOtpEmail(to: string, otp: string, purpose: 'registrati
     });
 
     console.log(`📩 OTP email sent to ${to} (${purpose}). MessageId: ${info.messageId}`);
-    const previewUrl = nodemailer.getTestMessageUrl(info);
-    if (previewUrl) {
-      console.log(`🔗 Ethereal preview URL: ${previewUrl}`);
-    }
-    return { success: true, previewUrl };
+    return { success: true };
   } catch (err: any) {
-    console.error(`❌ Failed to send OTP email to ${to}:`, err);
-    return { success: false };
+    console.error(`❌ Failed to send OTP email to ${to}:`, err.message || err);
+    return { success: false, error: err.message || 'Failed to send email' };
   }
 }
