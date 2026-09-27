@@ -113,4 +113,40 @@ router.post('/:id/regenerate', async (req: AuthenticatedRequest, res: Response, 
   }
 });
 
+// GET /api/posters/user/:userId – fetch poster history for user
+router.get('/user/:userId', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const requestedUserId = req.params.userId;
+    // Allow users to see their own posters (or admin)
+    if (req.user!._id.toString() !== requestedUserId && req.user!.role !== 'admin') {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const posters = await Poster.find({ userId: requestedUserId })
+      .populate('templateId', 'title occasionType thumbnailUrl')
+      .sort({ createdAt: -1 });
+
+    res.json(posters);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// DELETE /api/posters/:id – delete a poster
+router.delete('/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const poster = await Poster.findById(req.params.id);
+    if (!poster) return res.status(404).json({ error: 'Poster not found' });
+
+    if (poster.userId.toString() !== req.user!._id.toString() && req.user!.role !== 'admin') {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    await Poster.findByIdAndDelete(req.params.id);
+    res.json({ success: true, message: 'Poster deleted successfully' });
+  } catch (err) {
+    next(err);
+  }
+});
+
 export default router;

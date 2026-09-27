@@ -30,7 +30,7 @@ export default function Navbar() {
           </div>
         </Link>
 
-        <nav className="flex items-center gap-6">
+        <nav className="flex items-center gap-5 sm:gap-6">
           <Link
             href="/templates"
             className="text-sm font-semibold text-gray-600 hover:text-emerald-700 transition-colors"
@@ -38,8 +38,17 @@ export default function Navbar() {
             টেমপ্লেট গ্যালারি
           </Link>
 
+          {user && (
+            <Link
+              href="/history"
+              className="text-sm font-semibold text-gray-600 hover:text-emerald-700 transition-colors"
+            >
+              আমার পোস্টার
+            </Link>
+          )}
+
           {user ? (
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
               <span className="text-xs px-3 py-1 bg-emerald-50 text-emerald-800 rounded-full font-medium border border-emerald-200">
                 {user.name}
               </span>

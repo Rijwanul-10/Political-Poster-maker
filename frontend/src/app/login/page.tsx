@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+import GoogleAuthButton from "@/components/GoogleAuthButton";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -59,6 +60,22 @@ export default function LoginPage() {
           </div>
         )}
 
+        {/* Google One-Click Login */}
+        <div className="mb-6">
+          <GoogleAuthButton
+            text="signin_with"
+            onError={(err) => setError(err)}
+          />
+          <div className="relative my-6 text-center">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-slate-200" />
+            </div>
+            <span className="relative bg-white px-3 text-xs text-slate-400 font-semibold uppercase tracking-wider">
+              অথবা ইমেইল দিয়ে
+            </span>
+          </div>
+        </div>
+
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
             <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
@@ -75,9 +92,17 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
-              পাসওয়ার্ড
-            </label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                পাসওয়ার্ড
+              </label>
+              <Link
+                href="/forgot-password"
+                className="text-xs text-emerald-600 hover:text-emerald-700 font-semibold hover:underline"
+              >
+                পাসওয়ার্ড ভুলে গেছেন?
+              </Link>
+            </div>
             <input
               type="password"
               required

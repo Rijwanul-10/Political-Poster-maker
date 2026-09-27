@@ -15,9 +15,9 @@ export async function renderPosterToBuffer(
   const height = template.layoutConfig?.canvas?.height || 1600;
 
   const isEid = template.occasionType === 'eid_utsob' || formData.headline?.includes('ঈদ');
-  const primaryColor = isEid ? '#065f46' : '#047857';
-  const accentColor = isEid ? '#d97706' : '#dc2626';
-  const goldColor = '#f59e0b';
+  const primaryColor = suggestion?.colorScheme?.primaryColor || (isEid ? '#065f46' : '#047857');
+  const accentColor = suggestion?.colorScheme?.accentColor || (isEid ? '#d97706' : '#dc2626');
+  const goldColor = suggestion?.colorScheme?.goldColor || '#f59e0b';
 
   const photosHtml = photoUrls.map((url, idx) => `
     <div class="photo-card photo-${idx + 1}">
