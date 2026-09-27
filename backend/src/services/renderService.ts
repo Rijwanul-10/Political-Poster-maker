@@ -1,4 +1,4 @@
-import puppeteer from 'puppeteer';
+import puppeteer from 'puppeteer-core';
 import { ITemplate } from '../models/Template';
 
 /**
@@ -449,11 +449,25 @@ export async function renderPosterToBuffer(
     </html>
   `;
 
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--no-first-run'],
-    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
-  });
+  // Use remote Browserless.io Chrome if BROWSERLESS_TOKEN is set,
+  // otherwise fall back to a local Chrome executable path.
+  const browserlessToken = process.env.BROWSERLESS_TOKEN;
+  let browser;
+  if (browserlessToken) {
+    browser = await puppeteer.connect({
+      browserWSEndpoint: `wss://chrome.browserless.io?token=${browserlessToken}`,
+    });
+  } else {
+    const execPath = process.env.PUPPETEER_EXECUTABLE_PATH
+      || (process.platform === 'win32'
+          ? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
+          : '/usr/bin/google-chrome-stable');
+    browser = await puppeteer.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--no-first-run'],
+      executablePath: execPath,
+    });
+  }
 
   try {
     const page = await browser.newPage();
