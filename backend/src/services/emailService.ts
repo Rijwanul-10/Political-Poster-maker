@@ -89,6 +89,41 @@ async function sendViaBrevo(to: string, subject: string, html: string): Promise<
   return { success: true, messageId: data.messageId };
 }
 
+async function sendViaMailjet(to: string, subject: string, html: string): Promise<any> {
+  const senderEmail = config.smtpUser || 'rizwanulkafi2003@gmail.com';
+  const credentials = Buffer.from(`${config.mailjetApiKeyPublic}:${config.mailjetApiKeyPrivate}`).toString('base64');
+  
+  const res = await fetch('https://api.mailjet.com/v3.1/send', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Basic ${credentials}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      Messages: [
+        {
+          From: {
+            Email: senderEmail,
+            Name: "পোস্টার কারিগর"
+          },
+          To: [
+            {
+              Email: to
+            }
+          ],
+          Subject: subject,
+          HTMLPart: html,
+        }
+      ]
+    }),
+  });
+  const data: any = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.ErrorMessage || `Mailjet API error: ${res.status}`);
+  }
+  return { success: true, messageId: data.Messages?.[0]?.To?.[0]?.MessageID };
+}
+
 export async function testSmtpConnection(): Promise<{ success: boolean; message: string; provider?: string }> {
   if (config.resendApiKey) {
     try {
@@ -100,6 +135,20 @@ export async function testSmtpConnection(): Promise<{ success: boolean; message:
       return { success: false, message: err.message || 'Resend API key invalid', provider: 'Resend (HTTP/443)' };
     } catch (e: any) {
       return { success: false, message: e.message, provider: 'Resend (HTTP/443)' };
+    }
+  }
+
+  if (config.mailjetApiKeyPublic && config.mailjetApiKeyPrivate) {
+    try {
+      const credentials = Buffer.from(`${config.mailjetApiKeyPublic}:${config.mailjetApiKeyPrivate}`).toString('base64');
+      const res = await fetch('https://api.mailjet.com/v3/REST/apikeytotals', {
+        headers: { 'Authorization': `Basic ${credentials}` },
+      });
+      if (res.ok) return { success: true, message: 'Mailjet HTTP API connected and verified!', provider: 'Mailjet (HTTP/443)' };
+      const err = await res.json().catch(() => ({}));
+      return { success: false, message: err.ErrorMessage || 'Mailjet API key invalid', provider: 'Mailjet (HTTP/443)' };
+    } catch (e: any) {
+      return { success: false, message: e.message, provider: 'Mailjet (HTTP/443)' };
     }
   }
 
@@ -185,6 +234,12 @@ export async function sendOtpEmail(to: string, otp: string, purpose: 'registrati
     if (config.resendApiKey) {
       await sendViaResend(to, subject, html);
       console.log(`📩 OTP email sent via Resend HTTP API to ${to} (${purpose}).`);
+      return { success: true };
+    }
+
+    if (config.mailjetApiKeyPublic && config.mailjetApiKeyPrivate) {
+      await sendViaMailjet(to, subject, html);
+      console.log(`📩 OTP email sent via Mailjet HTTP API to ${to} (${purpose}).`);
       return { success: true };
     }
 

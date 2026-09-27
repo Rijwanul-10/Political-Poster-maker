@@ -9,6 +9,8 @@ export const config = {
   geminiApiKey: process.env.GEMINI_API_KEY ?? '',
   cloudinaryUrl: process.env.CLOUDINARY_URL ?? '',
   resendApiKey: process.env.RESEND_API_KEY ?? '',
+  mailjetApiKeyPublic: process.env.MAILJET_API_KEY_PUBLIC ?? '',
+  mailjetApiKeyPrivate: process.env.MAILJET_API_KEY_PRIVATE ?? '',
   brevoApiKey: process.env.BREVO_API_KEY ?? '',
   smtpHost: process.env.SMTP_HOST ?? '',
   smtpPort: Number(process.env.SMTP_PORT) || 587,
