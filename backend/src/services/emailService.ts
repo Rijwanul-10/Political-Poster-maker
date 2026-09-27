@@ -19,28 +19,8 @@ async function getTransporter(): Promise<any> {
     return transporter;
   }
 
-  // If no SMTP configured, use ethereal test account
-  try {
-    const testAccount = await nodemailer.createTestAccount();
-    transporter = nodemailer.createTransport({
-      host: 'smtp.ethereal.email',
-      port: 587,
-      secure: false,
-      auth: {
-        user: testAccount.user,
-        pass: testAccount.pass,
-      },
-    });
-    console.log(`📧 Initialized Ethereal test email account: ${testAccount.user}`);
-    return transporter;
-  } catch (err) {
-    console.warn('⚠️ Could not create Ethereal test account, using console logger');
-    transporter = nodemailer.createTransport({
-      streamTransport: true,
-      newline: 'windows',
-    });
-    return transporter;
-  }
+  // If SMTP not configured, throw error to enforce real SMTP setup
+  throw new Error('🚨 SMTP configuration missing. Please set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, and SMTP_FROM environment variables.');
 }
 
 export async function sendOtpEmail(to: string, otp: string, purpose: 'registration' | 'password_reset') {
@@ -113,7 +93,6 @@ export async function sendOtpEmail(to: string, otp: string, purpose: 'registrati
     return { success: true, previewUrl };
   } catch (err: any) {
     console.error(`❌ Failed to send OTP email to ${to}:`, err);
-    console.log(`🔑 DEV OTP FALLBACK: Code for ${to} is: ${otp}`);
-    return { success: false, fallbackOtp: otp };
+    return { success: false };
   }
 }
