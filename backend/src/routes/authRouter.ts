@@ -13,16 +13,31 @@ router.post('/register', async (req: Request, res: Response, next: NextFunction)
       return res.status(400).json({ error: 'Name and password are required' });
     }
 
-    const existing = await User.findOne({ $or: [{ email }, { phone }] });
-    if (existing) {
-      return res.status(409).json({ error: 'User with given email or phone already exists' });
+    const orConditions: any[] = [];
+    if (email && email.trim()) orConditions.push({ email: email.trim().toLowerCase() });
+    if (phone && phone.trim()) orConditions.push({ phone: phone.trim() });
+
+    if (orConditions.length > 0) {
+      const existing = await User.findOne({ $or: orConditions });
+      if (existing) {
+        return res.status(409).json({ error: 'User with given email or phone already exists' });
+      }
     }
 
     const passwordHash = await hashPassword(password);
-    const user = new User({ name, email, phone, passwordHash } as Partial<IUser>);
+    const user = new User({
+      name: name.trim(),
+      email: email ? email.trim().toLowerCase() : undefined,
+      phone: phone ? phone.trim() : undefined,
+      passwordHash,
+    } as Partial<IUser>);
     await user.save();
+
     const token = signToken(user);
-    res.status(201).json({ token, user: { id: user._id, name: user.name, email: user.email, phone: user.phone, role: user.role } });
+    res.status(201).json({
+      token,
+      user: { id: user._id, name: user.name, email: user.email, phone: user.phone, role: user.role },
+    });
   } catch (err) {
     next(err);
   }
@@ -35,7 +50,12 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
     if (!password || (!email && !phone)) {
       return res.status(400).json({ error: 'Password and either email or phone are required' });
     }
-    const user = await User.findOne(email ? { email } : { phone });
+
+    const filter: any = {};
+    if (email && email.trim()) filter.email = email.trim().toLowerCase();
+    else if (phone && phone.trim()) filter.phone = phone.trim();
+
+    const user = await User.findOne(filter);
     if (!user) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
@@ -44,7 +64,10 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
       return res.status(401).json({ error: 'Invalid credentials' });
     }
     const token = signToken(user);
-    res.json({ token, user: { id: user._id, name: user.name, email: user.email, phone: user.phone, role: user.role } });
+    res.json({
+      token,
+      user: { id: user._id, name: user.name, email: user.email, phone: user.phone, role: user.role },
+    });
   } catch (err) {
     next(err);
   }

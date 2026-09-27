@@ -2,7 +2,6 @@ import express, { Request, Response, NextFunction } from 'express';
 import { AuthenticatedRequest, authMiddleware } from '../middleware/auth';
 import { Poster, IPoster } from '../models/Poster';
 import { Template } from '../models/Template';
-import { uploadFromBuffer } from '../services/storageService';
 import { generateLayoutSuggestion } from '../services/geminiService';
 import { renderPosterToBuffer } from '../services/renderService';
 import { uploadFromBuffer as uploadImage } from '../services/storageService';
@@ -18,43 +17,57 @@ router.post('/', async (req: AuthenticatedRequest, res: Response, next: NextFunc
     const userId = req.user!._id;
     const {
       templateId,
-      formData,
-      photoUrls,
+      formData = {},
+      photoUrls = [],
     } = req.body as {
       templateId: string;
       formData: any;
-      photoUrls: string[]; // URLs returned from /api/upload
+      photoUrls: string[];
     };
 
     // Validate template exists
     const template = await Template.findById(templateId);
     if (!template) return res.status(404).json({ error: 'Template not found' });
 
-    // Create Poster doc in "draft" state
+    // Normalize formData to ensure required schema fields are present
+    const normalizedFormData = {
+      ...formData,
+      name: formData.name || 'সম্মানিত অতিথি',
+      occasionType: formData.occasionType || template.occasionType || 'general',
+      headlineText: formData.headlineText || formData.headline || template.title,
+    };
+
+    // Create Poster doc in "generating" state
     const poster = new Poster({
       userId,
       templateId,
-      formData,
+      formData: normalizedFormData,
       uploadedPhotoUrls: photoUrls,
       status: 'generating',
     } as Partial<IPoster>);
     await poster.save();
 
-    // Call Gemini for layout suggestions (crops, colors)
-    const geminiSuggestion = await generateLayoutSuggestion(template, photoUrls, formData);
-    poster.geminiSuggestion = geminiSuggestion;
-    await poster.save();
+    try {
+      // Call Gemini for layout suggestions (crops, colors)
+      const geminiSuggestion = await generateLayoutSuggestion(template, photoUrls, normalizedFormData);
+      poster.geminiSuggestion = geminiSuggestion;
 
-    // Render poster image via Puppeteer
-    const imageBuffer = await renderPosterToBuffer(template, geminiSuggestion, formData, photoUrls);
+      // Render poster image via Puppeteer
+      const imageBuffer = await renderPosterToBuffer(template, geminiSuggestion, normalizedFormData, photoUrls);
 
-    // Upload final image to Cloudinary
-    const uploadResult = await uploadImage(imageBuffer, 'generated-posters');
-    poster.generatedImageUrl = uploadResult.url;
-    poster.status = 'completed';
-    await poster.save();
+      // Upload final image to Cloudinary (or local fallback)
+      const uploadResult = await uploadImage(imageBuffer, 'generated-posters');
+      poster.generatedImageUrl = uploadResult.url;
+      poster.status = 'completed';
+      await poster.save();
 
-    res.status(201).json({ posterId: poster._id, imageUrl: poster.generatedImageUrl });
+      res.status(201).json({ posterId: poster._id, imageUrl: poster.generatedImageUrl });
+    } catch (genError: any) {
+      console.error('❌ Poster generation error:', genError);
+      poster.status = 'failed';
+      await poster.save();
+      throw genError;
+    }
   } catch (err) {
     next(err);
   }
@@ -78,17 +91,15 @@ router.post('/:id/regenerate', async (req: AuthenticatedRequest, res: Response, 
     if (!poster) return res.status(404).json({ error: 'Poster not found' });
 
     if (poster.regenerateCount >= 3) {
-      return res.status(429).json({ error: 'Regeneration limit reached' });
+      return res.status(429).json({ error: 'Regeneration limit reached (max 3)' });
     }
 
-    // Re‑run Gemini and render steps
     const template = await Template.findById(poster.templateId);
     if (!template) return res.status(500).json({ error: 'Template missing' });
 
     const geminiSuggestion = await generateLayoutSuggestion(template, poster.uploadedPhotoUrls, poster.formData);
     poster.geminiSuggestion = geminiSuggestion;
     poster.regenerateCount += 1;
-    await poster.save();
 
     const imageBuffer = await renderPosterToBuffer(template, geminiSuggestion, poster.formData, poster.uploadedPhotoUrls);
     const uploadResult = await uploadImage(imageBuffer, 'generated-posters');
