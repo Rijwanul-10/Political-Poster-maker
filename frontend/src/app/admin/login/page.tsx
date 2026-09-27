@@ -5,14 +5,53 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
 
 export default function AdminLoginPage() {
   const router = useRouter();
   const { login } = useAuth();
+  const { lang } = useLanguage();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const T = {
+    bn: {
+      badge: "অ্যাডমিন কনসোল",
+      title: "অ্যাডমিন কনসোল লগইন",
+      subtitle: "পোস্টার কারিগর সিস্টেম প্রশাসন ও কনটেন্ট মডারেশন প্যানেল",
+      defaultCredsTitle: "🔑 ডিফল্ট অ্যাডমিন ক্রেডেনশিয়াল",
+      autoFillBtn: "স্বয়ংক্রিয় পূরণ করুন",
+      emailLabel: "অ্যাডমিন ইমেইল",
+      emailPlaceholder: "admin@poster-maker.com",
+      passwordLabel: "পাসওয়ার্ড",
+      loginBtn: "অ্যাডমিন প্যানেলে প্রবেশ করুন →",
+      loadingBtn: "যাচাই করা হচ্ছে...",
+      normalUserPrompt: "সাধারণ ব্যবহারকারী?",
+      normalUserLink: "সাধারণ লগইনে যান",
+      noPermissionError: "এই অ্যাকাউন্টে অ্যাডমিন পারমিশন নেই। অনুগ্রহ করে অ্যাডমিন অ্যাকাউন্ট দিয়ে লগইন করুন।",
+      loginFailedError: "লগইন ব্যর্থ হয়েছে। ইমেইল বা পাসওয়ার্ড যাচাই করুন।",
+    },
+    en: {
+      badge: "Admin Console",
+      title: "Admin Console Login",
+      subtitle: "Poster Karigor system administration and content moderation panel",
+      defaultCredsTitle: "🔑 Default Admin Credentials",
+      autoFillBtn: "Auto Fill",
+      emailLabel: "Admin Email",
+      emailPlaceholder: "admin@poster-maker.com",
+      passwordLabel: "Password",
+      loginBtn: "Sign In to Admin Console →",
+      loadingBtn: "Verifying...",
+      normalUserPrompt: "Standard user?",
+      normalUserLink: "Go to User Login",
+      noPermissionError: "This account does not have admin privileges. Please sign in with an admin account.",
+      loginFailedError: "Login failed. Please verify your email and password.",
+    },
+  };
+
+  const t = T[lang] || T.bn;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,14 +70,24 @@ export default function AdminLoginPage() {
       });
 
       if (data.user.role !== "admin") {
-        setError("এই অ্যাকাউন্টে অ্যাডমিন পারমিশন নেই। অনুগ্রহ করে অ্যাডমিন অ্যাকাউন্ট দিয়ে লগইন করুন।");
+        setError(t.noPermissionError);
         return;
       }
 
       login(data.token, data.user);
       router.push("/admin");
     } catch (err: any) {
-      setError(err.message || "লগইন ব্যর্থ হয়েছে");
+      if (lang === "en") {
+        if (err.message?.includes("ভুল") || err.message?.includes("পাসওয়ার্ড")) {
+          setError("Invalid email or password");
+        } else if (err.message?.includes("পারমিশন")) {
+          setError(t.noPermissionError);
+        } else {
+          setError(err.message || t.loginFailedError);
+        }
+      } else {
+        setError(err.message || t.loginFailedError);
+      }
     } finally {
       setLoading(false);
     }
@@ -59,9 +108,9 @@ export default function AdminLoginPage() {
           <div className="w-14 h-14 rounded-2xl bg-slate-900 text-white font-black text-2xl flex items-center justify-center mx-auto shadow-lg mb-3">
             🛡️
           </div>
-          <h1 className="text-2xl font-black text-slate-900">অ্যাডমিন কনসোল লগইন</h1>
+          <h1 className="text-2xl font-black text-slate-900">{t.title}</h1>
           <p className="text-xs text-slate-500 mt-1">
-            পোস্টার কারিগর সিস্টেম প্রশাসন ও কনটেন্ট মডারেশন প্যানেল
+            {t.subtitle}
           </p>
         </div>
 
@@ -75,30 +124,36 @@ export default function AdminLoginPage() {
         {/* Default Admin Quick Login Box */}
         <div className="mb-6 p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-950 text-xs space-y-2">
           <div className="font-bold flex items-center justify-between">
-            <span>🔑 ডিফল্ট অ্যাডমিন ক্রেডেনশিয়াল</span>
+            <span>{t.defaultCredsTitle}</span>
             <button
               type="button"
               onClick={handleQuickFill}
-              className="text-[11px] font-bold text-white bg-emerald-700 hover:bg-emerald-800 px-2.5 py-1 rounded-lg shadow-sm transition"
+              className="text-[11px] font-bold text-white bg-emerald-700 hover:bg-emerald-800 px-2.5 py-1 rounded-lg shadow-sm transition cursor-pointer"
             >
-              স্বয়ংক্রিয় পূরণ করুন
+              {t.autoFillBtn}
             </button>
           </div>
           <div className="font-mono text-[11px] bg-white p-2 rounded-lg border border-emerald-100 space-y-1">
-            <div>ইমেইল: <span className="font-bold text-slate-900">admin@poster-maker.com</span></div>
-            <div>পাসওয়ার্ড: <span className="font-bold text-slate-900">AdminPassword@123</span></div>
+            <div>
+              {lang === "bn" ? "ইমেইল:" : "Email:"}{" "}
+              <span className="font-bold text-slate-900">admin@poster-maker.com</span>
+            </div>
+            <div>
+              {lang === "bn" ? "পাসওয়ার্ড:" : "Password:"}{" "}
+              <span className="font-bold text-slate-900">AdminPassword@123</span>
+            </div>
           </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-              অ্যাডমিন ইমেইল
+              {t.emailLabel}
             </label>
             <input
               type="email"
               required
-              placeholder="admin@poster-maker.com"
+              placeholder={t.emailPlaceholder}
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
               className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 transition text-sm font-medium"
@@ -107,7 +162,7 @@ export default function AdminLoginPage() {
 
           <div>
             <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-              পাসওয়ার্ড
+              {t.passwordLabel}
             </label>
             <input
               type="password"
@@ -122,16 +177,16 @@ export default function AdminLoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full mt-2 py-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm shadow-md hover:shadow-lg transition disabled:opacity-50"
+            className="w-full mt-2 py-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm shadow-md hover:shadow-lg transition disabled:opacity-50 cursor-pointer"
           >
-            {loading ? "যাচাই করা হচ্ছে..." : "অ্যাডমিন প্যানেলে প্রবেশ করুন →"}
+            {loading ? t.loadingBtn : t.loginBtn}
           </button>
         </form>
 
         <div className="mt-8 text-center text-xs text-slate-500 border-t border-slate-100 pt-4">
-          সাধারণ ব্যবহারকারী?{" "}
+          {t.normalUserPrompt}{" "}
           <Link href="/login" className="font-bold text-emerald-600 hover:underline">
-            সাধারণ লগইনে যান
+            {t.normalUserLink}
           </Link>
         </div>
       </div>

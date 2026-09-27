@@ -2,14 +2,20 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
 import GoogleAuthButton from "@/components/GoogleAuthButton";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const { login } = useAuth();
+  const { lang } = useLanguage();
+  const searchParams = useSearchParams();
+  const redirect = searchParams.get("redirect") || "/templates";
+
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -32,25 +38,62 @@ export default function LoginPage() {
       });
 
       login(data.token, data.user);
-      router.push("/templates");
+      router.push(redirect);
     } catch (err: any) {
-      setError(err.message || "Login failed");
+      if (lang === "en") {
+        if (err.message?.includes("ভুল") || err.message?.includes("পাসওয়ার্ড")) {
+          setError("Invalid email/phone or password");
+        } else {
+          setError(err.message || "Login failed");
+        }
+      } else {
+        setError(err.message || "লগইন ব্যর্থ হয়েছে");
+      }
     } finally {
       setLoading(false);
     }
   };
+
+  const T = {
+    bn: {
+      title: "লগইন করুন",
+      subtitle: "আপনার একাউন্টে প্রবেশ করে পোস্টার তৈরি করুন",
+      orWith: "অথবা ইমেইল দিয়ে",
+      emailLabel: "ইমেইল বা ফোন নম্বর",
+      emailPlaceholder: "admin@example.com অথবা 017xxxxxxxx",
+      passwordLabel: "পাসওয়ার্ড",
+      forgotPassword: "পাসওয়ার্ড ভুলে গেছেন?",
+      loginBtn: "লগইন",
+      loadingBtn: "যাচাই করা হচ্ছে...",
+      noAccount: "একাউন্ট নেই?",
+      registerLink: "নতুন একাউন্ট খুলুন",
+    },
+    en: {
+      title: "Sign In",
+      subtitle: "Access your account and start creating posters",
+      orWith: "or continue with email",
+      emailLabel: "Email or Phone Number",
+      emailPlaceholder: "admin@example.com or 017xxxxxxxx",
+      passwordLabel: "Password",
+      forgotPassword: "Forgot Password?",
+      loginBtn: "Sign In",
+      loadingBtn: "Verifying...",
+      noAccount: "Don't have an account?",
+      registerLink: "Create a new account",
+    },
+  };
+
+  const t = T[lang];
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md bg-white rounded-3xl border border-slate-200/80 shadow-xl p-8 sm:p-10">
         <div className="text-center mb-8">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white font-black text-2xl flex items-center justify-center mx-auto shadow-md mb-3">
-            প
+            {lang === "bn" ? "প" : "P"}
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">লগইন করুন</h1>
-          <p className="text-sm text-slate-500 mt-1">
-            আপনার একাউন্টে প্রবেশ করে পোস্টার তৈরি করুন
-          </p>
+          <h1 className="text-2xl font-bold text-slate-900">{t.title}</h1>
+          <p className="text-sm text-slate-500 mt-1">{t.subtitle}</p>
         </div>
 
         {error && (
@@ -60,18 +103,14 @@ export default function LoginPage() {
           </div>
         )}
 
-        {/* Google One-Click Login */}
         <div className="mb-6">
-          <GoogleAuthButton
-            text="signin_with"
-            onError={(err) => setError(err)}
-          />
+          <GoogleAuthButton text="signin_with" onError={(err) => setError(err)} />
           <div className="relative my-6 text-center">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-slate-200" />
             </div>
             <span className="relative bg-white px-3 text-xs text-slate-400 font-semibold uppercase tracking-wider">
-              অথবা ইমেইল দিয়ে
+              {t.orWith}
             </span>
           </div>
         </div>
@@ -79,12 +118,12 @@ export default function LoginPage() {
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
             <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
-              ইমেইল বা ফোন নম্বর
+              {t.emailLabel}
             </label>
             <input
               type="text"
               required
-              placeholder="admin@example.com অথবা 017xxxxxxxx"
+              placeholder={t.emailPlaceholder}
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
               className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition-all text-sm"
@@ -94,13 +133,13 @@ export default function LoginPage() {
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                পাসওয়ার্ড
+                {t.passwordLabel}
               </label>
               <Link
                 href="/forgot-password"
                 className="text-xs text-emerald-600 hover:text-emerald-700 font-semibold hover:underline"
               >
-                পাসওয়ার্ড ভুলে গেছেন?
+                {t.forgotPassword}
               </Link>
             </div>
             <input
@@ -118,17 +157,31 @@ export default function LoginPage() {
             disabled={loading}
             className="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-sm shadow-md hover:shadow-lg transition-all disabled:opacity-50"
           >
-            {loading ? "যাচাই করা হচ্ছে..." : "লগইন"}
+            {loading ? t.loadingBtn : t.loginBtn}
           </button>
         </form>
 
         <div className="mt-8 text-center text-sm text-slate-600">
-          একাউন্ট নেই?{" "}
+          {t.noAccount}{" "}
           <Link href="/register" className="font-bold text-emerald-600 hover:underline">
-            নতুন একাউন্ট খুলুন
+            {t.registerLink}
           </Link>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-[50vh] flex items-center justify-center">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-emerald-600" />
+        </div>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   );
 }

@@ -1,8 +1,7 @@
-"use client";
-
 import { useEffect, useRef, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { useRouter } from "next/navigation";
 
 declare global {
@@ -23,6 +22,7 @@ export default function GoogleAuthButton({
   onError,
 }: GoogleAuthButtonProps) {
   const { login } = useAuth();
+  const { lang } = useLanguage();
   const router = useRouter();
   const buttonRef = useRef<HTMLDivElement>(null);
   const [hasClientId, setHasClientId] = useState(false);
@@ -155,35 +155,57 @@ export default function GoogleAuthButton({
                 d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
               />
             </svg>
-            <span>Google দিয়ে {text === "signup_with" ? "নিবন্ধন" : "লগইন"} করুন</span>
+            <span>
+              {lang === "bn"
+                ? `Google দিয়ে ${text === "signup_with" ? "নিবন্ধন" : "লগইন"} করুন`
+                : `${text === "signup_with" ? "Sign up" : "Sign in"} with Google`}
+            </span>
           </button>
 
           {/* Setup Notice / Dev Test Mode Modal */}
           {showConfigHelp && (
             <div className="mt-3 p-4 rounded-2xl bg-amber-50/80 border border-amber-200 text-xs text-slate-700 space-y-3">
               <div className="font-bold text-amber-900 flex items-center justify-between">
-                <span>⚠️ Google OAuth ক্লায়েন্ট আইডি কনফিগারেশন</span>
+                <span>
+                  {lang === "bn"
+                    ? "⚠️ Google OAuth ক্লায়েন্ট আইডি কনফিগারেশন"
+                    : "⚠️ Google OAuth Client Configuration"}
+                </span>
                 <button
                   type="button"
                   onClick={() => setShowConfigHelp(false)}
-                  className="text-slate-400 hover:text-slate-700"
+                  className="text-slate-400 hover:text-slate-700 cursor-pointer"
                 >
                   ✕
                 </button>
               </div>
 
               <p className="leading-relaxed">
-                বাস্তব Google পপআপ কাজ করার জন্য আপনার Google Cloud Console থেকে তৈরি করা{" "}
-                <code className="bg-amber-100 px-1 py-0.5 rounded text-amber-900 font-mono">
-                  NEXT_PUBLIC_GOOGLE_CLIENT_ID
-                </code>{" "}
-                প্রয়োজন (নিচে সেটআপ গাইড রয়েছে)।
+                {lang === "bn" ? (
+                  <>
+                    বাস্তব Google পপআপ কাজ করার জন্য আপনার Google Cloud Console থেকে তৈরি করা{" "}
+                    <code className="bg-amber-100 px-1 py-0.5 rounded text-amber-900 font-mono">
+                      NEXT_PUBLIC_GOOGLE_CLIENT_ID
+                    </code>{" "}
+                    প্রয়োজন।
+                  </>
+                ) : (
+                  <>
+                    For standard Google popup authorization, configure{" "}
+                    <code className="bg-amber-100 px-1 py-0.5 rounded text-amber-900 font-mono">
+                      NEXT_PUBLIC_GOOGLE_CLIENT_ID
+                    </code>{" "}
+                    in your environment settings.
+                  </>
+                )}
               </p>
 
               {/* Dev Simulation Box */}
               <div className="bg-white p-3 rounded-xl border border-amber-200 space-y-2">
                 <div className="font-semibold text-slate-900">
-                  🧪 লোকাল টেস্ট করুন (One-Click Google Simulation):
+                  {lang === "bn"
+                    ? "🧪 লোকাল টেস্ট করুন (One-Click Google Simulation):"
+                    : "🧪 Local Test (One-Click Google Simulation):"}
                 </div>
                 <form onSubmit={handleDevGoogleLogin} className="space-y-2">
                   <input
@@ -196,7 +218,7 @@ export default function GoogleAuthButton({
                   />
                   <input
                     type="text"
-                    placeholder="আপনার নাম (ঐচ্ছিক)"
+                    placeholder={lang === "bn" ? "আপনার নাম (ঐচ্ছিক)" : "Your name (optional)"}
                     value={devName}
                     onChange={(e) => setDevName(e.target.value)}
                     className="w-full px-3 py-1.5 rounded-lg border border-slate-200 text-xs"
@@ -204,9 +226,11 @@ export default function GoogleAuthButton({
                   <button
                     type="submit"
                     disabled={isSubmittingDev}
-                    className="w-full py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm"
+                    className="w-full py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm cursor-pointer"
                   >
-                    {isSubmittingDev ? "লগইন হচ্ছে..." : "Google লগইন সিমুলেট করুন 🚀"}
+                    {isSubmittingDev
+                      ? (lang === "bn" ? "লগইন হচ্ছে..." : "Signing in...")
+                      : (lang === "bn" ? "Google লগইন সিমুলেট করুন 🚀" : "Simulate Google Login 🚀")}
                   </button>
                 </form>
               </div>

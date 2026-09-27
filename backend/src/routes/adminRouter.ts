@@ -3,25 +3,81 @@ import { AuthenticatedRequest, adminMiddleware } from '../middleware/auth';
 import { Template } from '../models/Template';
 import { Poster } from '../models/Poster';
 import { User } from '../models/User';
+import { Payment } from '../models/Payment';
+import { GenerationLog } from '../models/GenerationLog';
 
 const router = express.Router();
 
 // Enforce admin privileges on all admin endpoints
 router.use(adminMiddleware);
 
-// GET /api/admin/stats – overview stats
+// GET /api/admin/stats – complete overview stats, records, and telemetry
 router.get('/stats', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    const totalUsers = await User.countDocuments();
-    const totalPosters = await Poster.countDocuments();
-    const completedPosters = await Poster.countDocuments({ status: 'completed' });
-    const totalTemplates = await Template.countDocuments();
+    const [
+      totalUsers,
+      verifiedUsers,
+      totalPosters,
+      completedPosters,
+      failedPosters,
+      totalTemplates,
+      activeTemplates,
+      totalPayments,
+      revenueResult,
+      recentUsers,
+      recentPosters,
+      recentPayments,
+      recentLogs,
+    ] = await Promise.all([
+      User.countDocuments(),
+      User.countDocuments({ isEmailVerified: true }),
+      Poster.countDocuments(),
+      Poster.countDocuments({ status: 'completed' }),
+      Poster.countDocuments({ status: 'failed' }),
+      Template.countDocuments(),
+      Template.countDocuments({ isActive: true }),
+      Payment.countDocuments({ status: 'verified' }),
+      Payment.aggregate([
+        { $match: { status: 'verified' } },
+        { $group: { _id: null, total: { $sum: '$amount' } } },
+      ]),
+      User.find().select('name email phone role isEmailVerified createdAt').sort({ createdAt: -1 }).limit(10),
+      Poster.find()
+        .populate('userId', 'name email phone')
+        .populate('templateId', 'title occasionType')
+        .sort({ createdAt: -1 })
+        .limit(10),
+      Payment.find()
+        .populate('userId', 'name email')
+        .sort({ createdAt: -1 })
+        .limit(10),
+      GenerationLog.find().sort({ createdAt: -1 }).limit(10),
+    ]);
+
+    const totalRevenue = revenueResult[0]?.total || 0;
 
     res.json({
       totalUsers,
+      verifiedUsers,
       totalPosters,
       completedPosters,
+      failedPosters,
       totalTemplates,
+      activeTemplates,
+      totalPayments,
+      totalRevenue,
+      recentUsers,
+      recentPosters,
+      recentPayments,
+      recentLogs,
+      systemInfo: {
+        nodeVersion: process.version,
+        uptimeSeconds: Math.floor(process.uptime()),
+        memoryMb: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+        model: 'gemini-3.8-flash',
+        platform: process.platform,
+        serverTime: new Date().toISOString(),
+      },
     });
   } catch (err) {
     next(err);

@@ -1,9 +1,9 @@
 import nodemailer from 'nodemailer';
 import { config } from '../config';
 
-let transporter: nodemailer.Transporter | null = null;
+let transporter: any = null;
 
-async function getTransporter(): Promise<nodemailer.Transporter> {
+async function getTransporter(): Promise<any> {
   if (transporter) return transporter;
 
   if (config.smtpHost && config.smtpUser && config.smtpPass) {

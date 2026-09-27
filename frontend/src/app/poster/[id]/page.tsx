@@ -4,6 +4,7 @@ import { useEffect, useState, use } from "react";
 import Link from "next/link";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface PosterData {
   _id: string;
@@ -29,6 +30,7 @@ export default function PosterStatusPage({
   const posterId = resolvedParams.id;
 
   const { token } = useAuth();
+  const { lang } = useLanguage();
   const [poster, setPoster] = useState<PosterData | null>(null);
   const [loading, setLoading] = useState(true);
   const [isRegenerating, setIsRegenerating] = useState(false);
@@ -67,7 +69,11 @@ export default function PosterStatusPage({
   const handleRegenerate = async () => {
     if (!poster) return;
     if (poster.regenerateCount >= 3) {
-      alert("রি-জেনারেট করার সর্বোচ্চ সীমা (৩ বার) পূর্ণ হয়েছে।");
+      alert(
+        lang === "bn"
+          ? "রি-জেনারেট করার সর্বোচ্চ সীমা (৩ বার) পূর্ণ হয়েছে।"
+          : "Maximum regeneration limit (3 times) reached."
+      );
       return;
     }
 
@@ -93,7 +99,10 @@ export default function PosterStatusPage({
           : null
       );
     } catch (err: any) {
-      setErrorMessage(err.message || "রি-জেনারেট ব্যর্থ হয়েছে");
+      setErrorMessage(
+        err.message ||
+          (lang === "bn" ? "রি-জেনারেট ব্যর্থ হয়েছে" : "Regeneration failed")
+      );
     } finally {
       setIsRegenerating(false);
     }
@@ -125,7 +134,7 @@ export default function PosterStatusPage({
       <!DOCTYPE html>
       <html>
         <head>
-          <title>${poster.formData?.headline || "পোস্টার"}</title>
+          <title>${poster.formData?.headline || "Poster"}</title>
           <style>
             @page { size: A3 portrait; margin: 0; }
             body { margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; background: #000; }
@@ -144,22 +153,26 @@ export default function PosterStatusPage({
     return (
       <div className="min-h-[70vh] flex flex-col items-center justify-center p-4">
         <div className="w-12 h-12 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin mb-4" />
-        <p className="text-slate-600 font-medium">পোস্টার লোড করা হচ্ছে...</p>
+        <p className="text-slate-600 font-medium">
+          {lang === "bn" ? "পোস্টার লোড করা হচ্ছে..." : "Loading poster..."}
+        </p>
       </div>
     );
   }
 
   if (errorMessage && !poster) {
     return (
-      <div className="max-w-md mx-auto my-16 p-8 bg-white rounded-3xl border border-red-200 text-center">
+      <div className="max-w-md mx-auto my-16 p-8 ios-glass-card text-center border-red-200">
         <span className="text-4xl mb-4 inline-block">❌</span>
-        <h2 className="text-xl font-bold text-slate-900 mb-2">সমস্যা দেখা দিয়েছে</h2>
+        <h2 className="text-xl font-bold text-slate-900 mb-2">
+          {lang === "bn" ? "সমস্যা দেখা দিয়েছে" : "Error Occurred"}
+        </h2>
         <p className="text-sm text-red-600 mb-6">{errorMessage}</p>
         <Link
           href="/templates"
-          className="inline-flex px-6 py-2.5 rounded-xl bg-slate-900 text-white font-bold text-sm"
+          className="inline-flex px-6 py-2.5 rounded-2xl ios-btn-primary font-bold text-sm"
         >
-          টেমপ্লেট গ্যালারিতে ফিরে যান
+          {lang === "bn" ? "টেমপ্লেট গ্যালারিতে ফিরে যান" : "Return to Templates"}
         </Link>
       </div>
     );
@@ -168,13 +181,13 @@ export default function PosterStatusPage({
   const isGenerating = poster?.status === "generating";
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-12">
+    <div className="max-w-5xl mx-auto px-4 py-8 sm:py-12">
       {/* Top Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 text-xs font-semibold mb-2">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-800 text-xs font-bold mb-2 border border-emerald-500/20">
             <span
-              className={`w-2 h-2 rounded-full ${
+              className={`w-2.5 h-2.5 rounded-full ${
                 poster?.status === "completed"
                   ? "bg-emerald-500"
                   : isGenerating
@@ -183,41 +196,52 @@ export default function PosterStatusPage({
               }`}
             />
             {poster?.status === "completed"
-              ? "পোস্টার প্রস্তুত"
+              ? lang === "bn"
+                ? "পোস্টার প্রস্তুত"
+                : "Poster Ready"
               : isGenerating
-              ? "তৈরি হচ্ছে (AI Processing)"
-              : "ব্যর্থ"}
+              ? lang === "bn"
+                ? "তৈরি হচ্ছে (AI Processing)"
+                : "Generating (AI Processing)"
+              : lang === "bn"
+              ? "ব্যর্থ"
+              : "Failed"}
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900">
-            {poster?.formData?.headline || "আপনার ডিজিটাল পোস্টার"}
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-900">
+            {poster?.formData?.headline ||
+              (lang === "bn" ? "আপনার ডিজিটাল পোস্টার" : "Your Digital Poster")}
           </h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="text-sm text-slate-500 mt-1 font-medium">
             {poster?.formData?.name} • {poster?.formData?.designation} • {poster?.formData?.party}
           </p>
         </div>
 
         <Link
           href="/templates"
-          className="inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-200 self-start sm:self-auto"
+          className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-emerald-800 bg-emerald-500/15 hover:bg-emerald-500/25 px-4 py-2.5 rounded-2xl border border-emerald-500/30 self-start sm:self-auto transition cursor-pointer"
         >
-          <span>+ নতুন পোস্টার বানান</span>
+          <span>+ {lang === "bn" ? "নতুন পোস্টার বানান" : "Create New Poster"}</span>
         </Link>
       </div>
 
       {/* Main Content Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Poster Preview Canvas */}
-        <div className="lg:col-span-8 bg-white rounded-3xl border border-slate-200/80 p-4 sm:p-6 shadow-xl flex flex-col items-center justify-center min-h-[550px] relative overflow-hidden">
+        <div className="lg:col-span-8 ios-glass-card p-4 sm:p-6 shadow-2xl flex flex-col items-center justify-center min-h-[550px] relative overflow-hidden border border-white/80">
           {isGenerating ? (
             <div className="text-center p-8 max-w-sm">
               <div className="w-16 h-16 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-6" />
-              <h3 className="text-lg font-bold text-slate-800 mb-2">
-                Gemini AI পোস্টার তৈরি করছে...
+              <h3 className="text-lg font-black text-slate-800 mb-2">
+                {lang === "bn"
+                  ? "Gemini AI পোস্টার তৈরি করছে..."
+                  : "Gemini AI is generating your poster..."}
               </h3>
-              <p className="text-xs text-slate-500 leading-relaxed mb-4">
-                নেতাদের ছবির ফেস ডিটেকশন ও কাটিং, স্লোগানের টাইপোগ্রাফি এবং কালার প্যালেট সাজানো হচ্ছে। অনুগ্রহ করে কয়েক সেকেন্ড অপেক্ষা করুন।
+              <p className="text-xs text-slate-500 leading-relaxed mb-4 font-medium">
+                {lang === "bn"
+                  ? "নেতাদের ছবির ফেস ডিটেকশন ও কাটিং, স্লোগানের টাইপোগ্রাফি এবং কালার প্যালেট সাজানো হচ্ছে। অনুগ্রহ করে কয়েক সেকেন্ড অপেক্ষা করুন।"
+                  : "Processing face detection, custom typography, party insignia, and color schemes. Please hold on a few seconds."}
               </p>
-              <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+              <div className="h-1.5 w-full bg-slate-200/80 rounded-full overflow-hidden">
                 <div className="h-full bg-emerald-500 animate-pulse w-3/4 rounded-full" />
               </div>
             </div>
@@ -231,35 +255,37 @@ export default function PosterStatusPage({
             </div>
           ) : (
             <div className="text-center p-8">
-              <p className="text-slate-500">কোনো ছবি পাওয়া যায়নি</p>
+              <p className="text-slate-500 font-medium">
+                {lang === "bn" ? "কোনো ছবি পাওয়া যায়নি" : "No image available"}
+              </p>
             </div>
           )}
         </div>
 
         {/* Sidebar Actions & Details */}
         <div className="lg:col-span-4 space-y-6">
-          <div className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm">
-            <h3 className="font-bold text-base text-slate-900 mb-4">
-              পোস্টার একশন
+          <div className="ios-glass-card p-6 shadow-md border border-white/80">
+            <h3 className="font-black text-base text-slate-900 mb-4">
+              {lang === "bn" ? "পোস্টার একশন" : "Poster Actions"}
             </h3>
 
             <div className="space-y-3">
               <button
                 onClick={handleDownload}
                 disabled={!poster?.generatedImageUrl || isGenerating}
-                className="w-full py-3.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                className="w-full py-3.5 px-4 rounded-2xl ios-btn-primary font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
               >
                 <span>📥</span>
-                <span>হাই-রেজ্যুলেশন PNG ডাউনলোড</span>
+                <span>{lang === "bn" ? "হাই-রেজ্যুলেশন PNG ডাউনলোড" : "Download High-Res PNG"}</span>
               </button>
 
               <button
                 onClick={handleDownloadPdf}
                 disabled={!poster?.generatedImageUrl || isGenerating}
-                className="w-full py-3 px-4 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-sm border border-rose-200 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                className="w-full py-3 px-4 rounded-2xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-700 font-bold text-sm border border-rose-500/25 transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
               >
                 <span>📄</span>
-                <span>প্রিন্ট-রেডি PDF এক্সপোর্ট (A3/Banner)</span>
+                <span>{lang === "bn" ? "প্রিন্ট-রেডি PDF এক্সপোর্ট (A3)" : "Print-Ready PDF Export (A3)"}</span>
               </button>
 
               <button
@@ -269,39 +295,45 @@ export default function PosterStatusPage({
                   isGenerating ||
                   (poster?.regenerateCount ?? 0) >= 3
                 }
-                className="w-full py-3 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                className="w-full py-3 px-4 rounded-2xl ios-glass-btn text-slate-700 font-bold text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
               >
                 <span>🔄</span>
                 <span>
                   {isRegenerating
-                    ? "নতুন ডিজাইন তৈরি হচ্ছে..."
-                    : `রি-জেনারেট করুন (${3 - (poster?.regenerateCount || 0)} বার বাকি)`}
+                    ? lang === "bn"
+                      ? "নতুন ডিজাইন তৈরি হচ্ছে..."
+                      : "Regenerating..."
+                    : lang === "bn"
+                    ? `রি-জেনারেট করুন (${3 - (poster?.regenerateCount || 0)} বার বাকি)`
+                    : `Regenerate (${3 - (poster?.regenerateCount || 0)} remaining)`}
                 </span>
               </button>
             </div>
 
-            <div className="mt-6 pt-6 border-t border-slate-100 text-xs text-slate-500 space-y-2">
+            <div className="mt-6 pt-6 border-t border-slate-200/60 text-xs text-slate-500 space-y-2">
               <div className="flex justify-between">
-                <span>ফরম্যাট:</span>
-                <span className="font-semibold text-slate-700">PNG (High Quality)</span>
+                <span>{lang === "bn" ? "ফরম্যাট:" : "Format:"}</span>
+                <span className="font-bold text-slate-800">PNG (High Quality)</span>
               </div>
               <div className="flex justify-between">
-                <span>প্রিন্ট সাইজ:</span>
-                <span className="font-semibold text-slate-700">1200 × 1600 px</span>
+                <span>{lang === "bn" ? "প্রিন্ট সাইজ:" : "Print Dimensions:"}</span>
+                <span className="font-bold text-slate-800">1200 × 1600 px</span>
               </div>
               <div className="flex justify-between">
-                <span>কালার প্রোফাইল:</span>
-                <span className="font-semibold text-slate-700">RGB / CMYK Friendly</span>
+                <span>{lang === "bn" ? "কালার প্রোফাইল:" : "Color Profile:"}</span>
+                <span className="font-bold text-slate-800">RGB / Print-Friendly</span>
               </div>
             </div>
           </div>
 
-          <div className="bg-emerald-50/60 rounded-3xl border border-emerald-100 p-6">
-            <h4 className="font-bold text-xs uppercase tracking-wider text-emerald-800 mb-2">
-              💡 প্রিন্ট ও সোশ্যাল টিপস
+          <div className="p-6 rounded-3xl bg-emerald-500/10 border border-emerald-500/25">
+            <h4 className="font-black text-xs uppercase tracking-wider text-emerald-800 mb-2">
+              💡 {lang === "bn" ? "প্রিন্ট ও সোশ্যাল টিপস" : "Print & Social Tips"}
             </h4>
-            <p className="text-xs text-emerald-900/80 leading-relaxed">
-              ডাউনলোড করা PNG ফাইলটি সরাসরি Facebook, WhatsApp গ্রুপ অথবা প্রেসে পাঠিয়ে ব্যানারে প্রিন্ট করার উপযোগী।
+            <p className="text-xs text-emerald-950/80 leading-relaxed font-medium">
+              {lang === "bn"
+                ? "ডাউনলোড করা PNG ফাইলটি সরাসরি Facebook, WhatsApp গ্রুপ অথবা প্রেসে পাঠিয়ে ব্যানারে প্রিন্ট করার উপযোগী।"
+                : "The downloaded PNG file is ready for direct sharing on Facebook, WhatsApp or sending to commercial press for PVC banner printing."}
             </p>
           </div>
         </div>

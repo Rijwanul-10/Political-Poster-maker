@@ -69,6 +69,6 @@ export async function uploadFromBuffer(
 function detectMimeType(buf: Buffer): string {
   if (buf.slice(0, 2).toString('hex') === 'ffd8') return 'image/jpeg';
   if (buf.slice(0, 4).toString('hex') === '89504e47') return 'image/png';
-  if (buf.slice(0, 4).toString('string') === 'RIFF') return 'image/webp';
+  if (buf.slice(0, 4).toString('utf-8') === 'RIFF') return 'image/webp';
   return 'image/jpeg';
 }

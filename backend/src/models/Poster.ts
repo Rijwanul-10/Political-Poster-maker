@@ -14,6 +14,13 @@ export interface IPoster extends Document {
     headlineFont?: string;
     photoLayout?: string;
     watermark?: boolean;
+    userDesignPrompt?: string;
+    partyLogoUrl?: string;
+    extraLogoUrl?: string;
+    photoDetails?: Array<{
+      name?: string;
+      role?: string;
+    }>;
   };
   uploadedPhotoUrls: string[];
   geminiSuggestion?: any;
@@ -39,6 +46,15 @@ const PosterSchema = new Schema<IPoster>(
       headlineFont: String,
       photoLayout: String,
       watermark: Boolean,
+      userDesignPrompt: String,
+      partyLogoUrl: String,
+      extraLogoUrl: String,
+      photoDetails: [
+        {
+          name: String,
+          role: String,
+        },
+      ],
     },
     uploadedPhotoUrls: [{ type: String }],
     geminiSuggestion: { type: Schema.Types.Mixed, default: null },

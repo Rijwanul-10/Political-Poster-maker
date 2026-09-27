@@ -1,36 +1,154 @@
-@import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&family=Tiro+Bangla&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800;900&family=Tiro+Bangla:ital@0;1&display=swap');
 @import "tailwindcss";
 
 :root {
-  --font-bangla: 'Hind Siliguri', 'Inter', -apple-system, sans-serif;
+  --font-bangla: 'Hind Siliguri', 'Inter', -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", sans-serif;
   --font-serif-bangla: 'Tiro Bangla', serif;
 }
 
+/* iOS Dynamic Ambient Wallpaper Background */
 body {
   font-family: var(--font-bangla);
-  background: #f8fafc;
+  background-color: #f1f5f9;
+  background-image: 
+    radial-gradient(at 10% 10%, rgba(16, 185, 129, 0.12) 0px, transparent 50%),
+    radial-gradient(at 90% 15%, rgba(56, 189, 248, 0.14) 0px, transparent 50%),
+    radial-gradient(at 50% 50%, rgba(245, 158, 11, 0.08) 0px, transparent 60%),
+    radial-gradient(at 80% 85%, rgba(139, 92, 246, 0.12) 0px, transparent 55%),
+    radial-gradient(at 15% 90%, rgba(236, 72, 153, 0.09) 0px, transparent 50%);
+  background-attachment: fixed;
   color: #0f172a;
   min-height: 100vh;
+  letter-spacing: -0.01em;
 }
 
-.font-display {
-  font-family: var(--font-serif-bangla);
+/* iPhone Liquid Glass Card */
+.ios-glass-card {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(28px) saturate(190%);
+  -webkit-backdrop-filter: blur(28px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  box-shadow: 
+    0 16px 36px -12px rgba(15, 23, 42, 0.06),
+    0 4px 16px -4px rgba(15, 23, 42, 0.03),
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.85);
+  border-radius: 1.75rem;
 }
 
-.glass-card {
-  background: rgba(255, 255, 255, 0.85);
+.ios-glass-card-hover {
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.ios-glass-card-hover:hover {
+  transform: translateY(-4px) scale(1.008);
+  box-shadow: 
+    0 24px 48px -12px rgba(15, 23, 42, 0.1),
+    0 8px 24px -4px rgba(15, 23, 42, 0.04),
+    inset 0 1px 2px 0 rgba(255, 255, 255, 0.95);
+  border-color: rgba(255, 255, 255, 0.9);
+}
+
+/* iPhone Glass Navbar */
+.ios-glass-nav {
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(32px) saturate(190%);
+  -webkit-backdrop-filter: blur(32px) saturate(190%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.03);
+}
+
+/* iPhone Glass Pill Button */
+.ios-glass-btn {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 
+    0 4px 14px 0 rgba(0, 0, 0, 0.04),
+    inset 0 1px 1px rgba(255, 255, 255, 0.8);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ios-glass-btn:active {
+  transform: scale(0.97);
+}
+
+/* Primary iOS Action Button */
+.ios-btn-primary {
+  background: linear-gradient(135deg, #059669 0%, #0d9488 50%, #0284c7 100%);
+  color: white;
+  border-radius: 1.25rem;
+  box-shadow: 
+    0 10px 24px -6px rgba(5, 150, 105, 0.45),
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.4);
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.ios-btn-primary:hover {
+  box-shadow: 
+    0 14px 28px -6px rgba(5, 150, 105, 0.55),
+    inset 0 1px 2px 0 rgba(255, 255, 255, 0.55);
+  transform: translateY(-2px);
+}
+
+.ios-btn-primary:active {
+  transform: scale(0.98);
+}
+
+/* iPhone Glass Inputs */
+.ios-glass-input {
+  background: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(226, 232, 240, 0.8);
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.04), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1.5px solid rgba(226, 232, 240, 0.8);
+  border-radius: 1rem;
+  transition: all 0.2s ease;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
 }
 
-.glass-card-hover {
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+.ios-glass-input:focus {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: #059669;
+  outline: none;
+  box-shadow: 
+    0 0 0 4px rgba(16, 185, 129, 0.15),
+    inset 0 1px 2px rgba(0, 0, 0, 0.02);
 }
 
-.glass-card-hover:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+/* iOS Segmented Pill Switcher */
+.ios-segmented-track {
+  background: rgba(226, 232, 240, 0.65);
+  backdrop-filter: blur(16px);
+  border-radius: 9999px;
+  padding: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  display: inline-flex;
+}
+
+.ios-segmented-item {
+  border-radius: 9999px;
+  padding: 6px 14px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  color: #475569;
+}
+
+.ios-segmented-item.active {
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* Dynamic Island Banner / Notch */
+.ios-notch-banner {
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  color: #ffffff;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
 }
 
 input, textarea, select {
