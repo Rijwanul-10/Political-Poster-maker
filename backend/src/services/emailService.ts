@@ -45,13 +45,87 @@ async function getTransporter(): Promise<any> {
   throw new Error('🚨 SMTP configuration missing. Please set SMTP_USER, SMTP_PASS, SMTP_HOST, and SMTP_FROM environment variables.');
 }
 
-export async function testSmtpConnection(): Promise<{ success: boolean; message: string }> {
+async function sendViaResend(to: string, subject: string, html: string): Promise<any> {
+  const from = config.smtpFrom.includes('<') ? config.smtpFrom : `পোস্টার কারিগর <${config.smtpFrom || 'onboarding@resend.dev'}>`;
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${config.resendApiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from,
+      to: [to],
+      subject,
+      html,
+    }),
+  });
+  const data: any = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.message || `Resend API error: ${res.status}`);
+  }
+  return { success: true, id: data.id };
+}
+
+async function sendViaBrevo(to: string, subject: string, html: string): Promise<any> {
+  const senderEmail = config.smtpUser || 'rizwanulkafi2003@gmail.com';
+  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      'api-key': config.brevoApiKey,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      sender: { name: 'পোস্টার কারিগর', email: senderEmail },
+      to: [{ email: to }],
+      subject,
+      htmlContent: html,
+    }),
+  });
+  const data: any = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.message || `Brevo API error: ${res.status}`);
+  }
+  return { success: true, messageId: data.messageId };
+}
+
+export async function testSmtpConnection(): Promise<{ success: boolean; message: string; provider?: string }> {
+  if (config.resendApiKey) {
+    try {
+      const res = await fetch('https://api.resend.com/api-keys', {
+        headers: { 'Authorization': `Bearer ${config.resendApiKey}` },
+      });
+      if (res.ok) return { success: true, message: 'Resend HTTP API connected and verified!', provider: 'Resend (HTTP/443)' };
+      const err = await res.json().catch(() => ({}));
+      return { success: false, message: err.message || 'Resend API key invalid', provider: 'Resend (HTTP/443)' };
+    } catch (e: any) {
+      return { success: false, message: e.message, provider: 'Resend (HTTP/443)' };
+    }
+  }
+
+  if (config.brevoApiKey) {
+    try {
+      const res = await fetch('https://api.brevo.com/v3/account', {
+        headers: { 'api-key': config.brevoApiKey },
+      });
+      if (res.ok) return { success: true, message: 'Brevo HTTP API connected and verified!', provider: 'Brevo (HTTP/443)' };
+      const err = await res.json().catch(() => ({}));
+      return { success: false, message: err.message || 'Brevo API key invalid', provider: 'Brevo (HTTP/443)' };
+    } catch (e: any) {
+      return { success: false, message: e.message, provider: 'Brevo (HTTP/443)' };
+    }
+  }
+
   try {
     const t = await getTransporter();
     await t.verify();
-    return { success: true, message: 'SMTP connection verified successfully!' };
+    return { success: true, message: 'SMTP connection verified successfully!', provider: 'SMTP' };
   } catch (err: any) {
-    return { success: false, message: err.message || 'SMTP verification failed' };
+    return { 
+      success: false, 
+      message: err.message || 'SMTP verification failed', 
+      provider: 'SMTP (Note: Render Free Tier blocks outbound SMTP ports 25/465/587)' 
+    };
   }
 }
 
@@ -108,6 +182,18 @@ export async function sendOtpEmail(to: string, otp: string, purpose: 'registrati
   `;
 
   try {
+    if (config.resendApiKey) {
+      await sendViaResend(to, subject, html);
+      console.log(`📩 OTP email sent via Resend HTTP API to ${to} (${purpose}).`);
+      return { success: true };
+    }
+
+    if (config.brevoApiKey) {
+      await sendViaBrevo(to, subject, html);
+      console.log(`📩 OTP email sent via Brevo HTTP API to ${to} (${purpose}).`);
+      return { success: true };
+    }
+
     const mailTransporter = await getTransporter();
     const info = await mailTransporter.sendMail({
       from: config.smtpFrom,

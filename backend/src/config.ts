@@ -8,6 +8,8 @@ export const config = {
   jwtSecret: process.env.JWT_SECRET ?? 'changeme',
   geminiApiKey: process.env.GEMINI_API_KEY ?? '',
   cloudinaryUrl: process.env.CLOUDINARY_URL ?? '',
+  resendApiKey: process.env.RESEND_API_KEY ?? '',
+  brevoApiKey: process.env.BREVO_API_KEY ?? '',
   smtpHost: process.env.SMTP_HOST ?? '',
   smtpPort: Number(process.env.SMTP_PORT) || 587,
   smtpUser: process.env.SMTP_USER ?? '',
