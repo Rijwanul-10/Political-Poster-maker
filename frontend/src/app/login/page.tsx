@@ -89,9 +89,11 @@ function LoginForm() {
     <div className="min-h-[80vh] flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md bg-white rounded-3xl border border-slate-200/80 shadow-xl p-8 sm:p-10">
         <div className="text-center mb-8">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white font-black text-2xl flex items-center justify-center mx-auto shadow-md mb-3">
-            {lang === "bn" ? "প" : "P"}
-          </div>
+          <img
+            src="/logo.png"
+            alt="Political Poster Maker Logo"
+            className="w-16 h-16 object-contain mx-auto mb-3 filter drop-shadow-md"
+          />
           <h1 className="text-2xl font-bold text-slate-900">{t.title}</h1>
           <p className="text-sm text-slate-500 mt-1">{t.subtitle}</p>
         </div>

@@ -20,9 +20,11 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Brand / Logo */}
         <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 via-teal-600 to-amber-500 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-emerald-600/25 group-hover:scale-105 group-hover:rotate-3 transition-transform border border-white/40">
-            প
-          </div>
+          <img
+            src="/logo.png"
+            alt="Political Poster Maker Logo"
+            className="w-10 h-10 object-contain group-hover:scale-105 transition-transform filter drop-shadow-sm"
+          />
           <div>
             <div className="font-extrabold text-lg tracking-tight bg-gradient-to-r from-slate-900 via-slate-800 to-emerald-800 bg-clip-text text-transparent">
               {t.nav.title}

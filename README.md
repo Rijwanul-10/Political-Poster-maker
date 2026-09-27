@@ -181,7 +181,9 @@ Because the backend utilizes **Puppeteer** to execute server-side HTML/CSS rende
    - `MONGODB_URI=<Your MongoDB Atlas Connection String>`
    - `JWT_SECRET=<Your Secure 64-character Random Secret>`
    - `GEMINI_API_KEY=<Your Gemini API Key>`
-   - `PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable` (if using Linux buildpack)
+   - `PUPPETEER_EXECUTABLE_PATH` *(Optional on Render)*:
+     - **Default (Standard Render Web Service):** Leave `PUPPETEER_EXECUTABLE_PATH` **blank/unset**. Puppeteer automatically installs and manages Chromium inside `node_modules` during `npm install`.
+     - **If using Docker / Custom Linux Buildpack:** Set to `/usr/bin/google-chrome-stable` or `/usr/bin/chromium-browser`.
 6. Once deployed, note down your production backend URL (e.g. `https://poster-maker-api.onrender.com`).
 
 #### Option B: Deploying Backend as Serverless on Vercel
@@ -256,5 +258,7 @@ Vercel is the native, optimal home for Next.js 15:
 
 ---
 
-## 📄 License
+## 📄 License & Copyright
+© 2026 **Rizwanul Kafi**. All Rights Reserved.
+
 This project is open-source under the [MIT License](LICENSE).

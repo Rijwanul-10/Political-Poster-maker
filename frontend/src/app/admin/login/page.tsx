@@ -105,9 +105,11 @@ export default function AdminLoginPage() {
         <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-slate-900 via-emerald-600 to-slate-900" />
 
         <div className="text-center mb-8 pt-2">
-          <div className="w-14 h-14 rounded-2xl bg-slate-900 text-white font-black text-2xl flex items-center justify-center mx-auto shadow-lg mb-3">
-            🛡️
-          </div>
+          <img
+            src="/logo.png"
+            alt="Political Poster Maker Logo"
+            className="w-16 h-16 object-contain mx-auto mb-3 filter drop-shadow-md"
+          />
           <h1 className="text-2xl font-black text-slate-900">{t.title}</h1>
           <p className="text-xs text-slate-500 mt-1">
             {t.subtitle}
